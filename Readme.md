@@ -1,8 +1,17 @@
 ### Sticky Image Manager
 
-This is a simple application that allows you to manage and launch multiple instances of a Viewer.
+This is an application that allows you to manage and launch multiple instances of a Viewer.  It is written in Java 23 and uses JavaFX for the UI.
 
-The point is just to add some ambience to your desktop, if you have the available screen space.
+It is designed to add some ambience to your desktop (if you have the available screen space).
+
+Features:
+- Allows individual image viewers to be resized and repositioned as desired
+- Remembers positions, images, and sizes so they can be restored upon the next launch
+- Supports basic EXIF rotation
+- Stores recent images in a list for easy access
+- Remembers the last directory when browsing for an image in the viewer's file dialog
+- Supports GIF animations
+
 
 ![Sticky Image Manager](res/Screencast.gif)
 

@@ -39,3 +39,7 @@ Just open it in IntelliJ or your favorite IDE and build it.
 
 #### Running
 To run the application, build it by doing a maven install, and then run it via the IDE.
+
+#### System Requirements
+- Java 23
+- OS: Windows, Linux, MacOS

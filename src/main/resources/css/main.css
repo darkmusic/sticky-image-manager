@@ -1,0 +1,112 @@
+.root {
+    currentfile-color: cyan;
+    windowcount-label-color: cyan;
+    windowcount-textfield-color: cyan;
+    windowcount-textfield-background-color: black;
+    managerbackground-color: black;
+    logbackground-color: black;
+    logforeground-color: #00ff19;
+    logborder-color: cadetblue;
+    menubar-color: cyan;
+    menubar-background-color: black;
+}
+
+.currentfile-label {
+    -fx-text-fill: currentfile-color;
+    -fx-font-size: 12px;
+}
+
+.currentfile-content {
+    -fx-text-fill: currentfile-color;
+    -fx-font-size: 12px;
+}
+
+.windowcount-label {
+    -fx-text-fill: windowcount-label-color;
+    -fx-font-size: 12px;
+}
+
+.windowcount-textfield {
+    -fx-text-fill: windowcount-textfield-color;
+    -fx-background-color: windowcount-textfield-background-color;
+    -fx-control-inner-background: windowcount-textfield-background-color;
+    -fx-font-size: 12px;
+}
+
+.manager {
+    -fx-background-color: managerbackground-color;
+}
+
+.log{
+    -fx-background-color: logbackground-color;
+    -fx-control-inner-background: logbackground-color;
+    -fx-text-fill: logforeground-color;
+    -fx-font-size: 10px;
+    -fx-border-width: 1px;
+    -fx-border-color: logborder-color;
+}
+
+.menu-bar {
+    -fx-background-color: menubar-background-color;
+}
+
+.menu {
+    -fx-background-color: menubar-background-color;
+    -fx-border-color: menubar-background-color;
+}
+
+.menu .label {
+    -fx-text-fill: menubar-color;
+    -fx-font-family: verdana;
+    -fx-font-size: 12px;
+}
+
+.context-menu {
+    -fx-background-color: menubar-background-color;
+    -fx-border-color: menubar-background-color;
+}
+
+.menu:hover,
+.menu:showing {
+    -fx-background-color: menubar-background-color;
+    -fx-text-fill: menubar-color;
+}
+
+.menu-item {
+    -fx-background-color: menubar-background-color;
+    -fx-text-fill: menubar-color;
+    -fx-font-family: verdana;
+    -fx-font-size: 12px;
+}
+
+.menu-item .label {
+    -fx-text-fill: menubar-color;
+    -fx-font-family: verdana;
+}
+
+.menu-item:focused .label {
+    -fx-text-fill: menubar-color;
+    -fx-font-family: verdana;
+}
+
+.menu-item:focused {
+    -fx-background: -fx-accent;
+    -fx-background-color: #91C9F7;
+    -fx-text-fill: menubar-color;
+    -fx-font-family: verdana;
+}
+
+.menu-item:disabled {
+    -fx-background: -fx-accent;
+    -fx-text-fill: menubar-color;
+    -fx-opacity: 0.9;
+    -fx-font-family: verdana;
+}
+
+.menu-item:focused:disabled {
+    -fx-background: -fx-accent;
+    -fx-background-color: menubar-background-color;
+    -fx-text-fill: menubar-color;
+    -fx-font-family: verdana;
+    -fx-opacity: 0.9;
+}

@@ -94,4 +94,12 @@
             </plugin>
         </plugins>
     </build>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub darkmusic Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/darkmusic/sticky-image-manager</url>
+        </repository>
+    </distributionManagement>
 </project>

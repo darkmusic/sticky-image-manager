@@ -1,5 +1,7 @@
 ### Sticky Image Manager
 
+[![Maven Package](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven-publish.yml/badge.svg)](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven-publish.yml)
+
 This is an application that allows you to manage and launch multiple instances of a Viewer.  It is written in Java 23 and uses JavaFX for the UI.
 
 It is designed to add some ambience to your desktop (if you have the available screen space).

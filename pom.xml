@@ -80,7 +80,7 @@
                         <id>default-cli</id>
                         <configuration>
                             <mainClass>
-                                com.darkmusic.stickyimagemgrjavafx/com.darkmusic.stickyimagemgr.ManagerApplication
+                                com.darkmusic.stickyimagemgr/com.darkmusic.stickyimagemgr.ManagerApplication
                             </mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>

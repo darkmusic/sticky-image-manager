@@ -35,12 +35,32 @@ It supports some basic EXIF rotation if present, but isn't perfect as rotated im
 You can resize images if needed by dragging a corner or a side.  It will maintain the aspect ratio of the image.
 
 #### Building
-To build the application, you'll need Java 23 and Maven (or you can use the mvnw wrapper).
-
-Just open it in IntelliJ or your favorite IDE and build it.
+1. Install JDK 23 (GraalVM-CE-23.0.2 has been confirmed to work) and Maven.
+2. Make sure your JAVA_HOME is set to the correct JDK version:
+   ```bash
+   export JAVA_HOME=/path/to/your/jdk
+   ```
+   or on Windows:
+   ```bash
+   set JAVA_HOME=C:\path\to\your\jdk
+   ```
+3. Also ensure your PATH variable points to the correct Java binary. For example, on Unix-like systems:
+   ```bash
+   export PATH=$JAVA_HOME/bin:$PATH
+   ```
+   On Windows:
+   ```bash
+   set PATH=%JAVA_HOME%\bin;%PATH%
+   ```
+4. In the project root, run:
+   ```bash
+   just build
+   ```
 
 #### Running
-To run the application, build it by doing a maven install, and then run it via the IDE.
+```bash
+just run
+```
 
 #### System Requirements
 - Java 23

@@ -1,3 +1,5 @@
+set windows-shell := ["pwsh", "-c"]
+
 build:
     @./mvnw clean compile
 

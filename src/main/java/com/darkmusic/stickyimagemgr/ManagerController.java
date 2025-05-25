@@ -184,10 +184,17 @@ public class ManagerController {
     }
 
     private void loadFileInfo(String filename) {
-        this.filename = filename;
-        var displayFilenameParts = filename.split("/");
-        var displayFilename = displayFilenameParts[displayFilenameParts.length - 2] + "/" + displayFilenameParts[displayFilenameParts.length - 1];
-        currentFileContent.setText(displayFilename);
+      this.filename = filename;
+      // Use File to handle both Unix and Windows path separators
+      File file = new File(filename);
+      File parent = file.getParentFile();
+      String displayFilename;
+      if (parent != null) {
+        displayFilename = parent.getName() + File.separator + file.getName();
+      } else {
+        displayFilename = file.getName();
+      }
+      currentFileContent.setText(displayFilename);
     }
 
     private void handleNewAction() {

@@ -111,39 +111,39 @@ public class ManagerController {
     private Region createMenuBar() {
         var fileMenu = new Menu("File");
         var newMenuItem = new MenuItem("New...");
-        newMenuItem.setOnAction(event -> handleNewAction());
+        newMenuItem.setOnAction(_ -> handleNewAction());
         var openMenuItem = new MenuItem("Open...");
-        openMenuItem.setOnAction(event -> handleOpenAction());
+        openMenuItem.setOnAction(_ -> handleOpenAction());
         openRecentMenu = new Menu("Open Recent");
         updateOpenRecentMenu();
         var saveMenuItem = new MenuItem("Save");
-        saveMenuItem.setOnAction(event -> handleSaveAction());
+        saveMenuItem.setOnAction(_ -> handleSaveAction());
         var saveAsMenuItem = new MenuItem("Save As...");
-        saveAsMenuItem.setOnAction(event -> handleSaveAsAction());
+        saveAsMenuItem.setOnAction(_ -> handleSaveAsAction());
         var exitMenuItem = new MenuItem("Exit");
-        exitMenuItem.setOnAction(event -> handleExitAction());
+        exitMenuItem.setOnAction(_ -> handleExitAction());
         fileMenu.getItems().addAll(newMenuItem, openMenuItem, openRecentMenu, saveMenuItem, saveAsMenuItem, exitMenuItem);
 
         var actionMenu = new Menu("Action");
         var launchMenuItem = new MenuItem("Launch");
-        launchMenuItem.setOnAction(event -> handleLaunchAction());
+        launchMenuItem.setOnAction(_ -> handleLaunchAction());
         var killMenuItem = new MenuItem("Kill");
-        killMenuItem.setOnAction(event -> handleKillAction());
+        killMenuItem.setOnAction(_ -> handleKillAction());
         actionMenu.getItems().addAll(launchMenuItem, killMenuItem);
 
         var helpMenu = new Menu("Help");
         var helpMenuItem = new MenuItem("Help");
-        helpMenuItem.setOnAction(event -> {
+        helpMenuItem.setOnAction(_ -> {
             var alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Help");
             alert.setHeaderText("Sticky Image Manager Help");
             alert.setContentText("""
                     This is a simple application that allows you to manage and launch multiple instances of a Viewer.
-                    To use this application, create a new config file or open an existing one. 
-                    After loading a config file, set the number of instances in the 'Window Count' text field and 
-                    click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config 
+                    To use this application, create a new config file or open an existing one.
+                    After loading a config file, set the number of instances in the 'Window Count' text field and
+                    click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
                     file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
-                    Animated GIF image playback is supported. 
+                    Animated GIF image playback is supported.
                     Exit the application with 'Exit'.
                     """);
             alert.showAndWait();
@@ -151,15 +151,15 @@ public class ManagerController {
         helpMenu.getItems().add(helpMenuItem);
 
         var aboutMenuItem = new MenuItem("About");
-        aboutMenuItem.setOnAction(event -> {
+        aboutMenuItem.setOnAction(_ -> {
             var alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("About");
             alert.setHeaderText("Sticky Image Manager");
             alert.setContentText("""
                     Version 1.0
-                    
+
                     Sticky Image Manager is a simple application that allows you to manage and launch multiple instances of a Viewer window.
-                    
+
                     Developed by Thomas Johnson, and written in Java using JavaFX.
                     """);
             alert.showAndWait();
@@ -178,7 +178,7 @@ public class ManagerController {
         openRecentMenu.getItems().clear();
         for (String file : recentFiles) {
             var menuItem = new MenuItem(file);
-            menuItem.setOnAction(event -> handleOpenRecentFile(file));
+            menuItem.setOnAction(_ -> handleOpenRecentFile(file));
             openRecentMenu.getItems().add(menuItem);
         }
     }

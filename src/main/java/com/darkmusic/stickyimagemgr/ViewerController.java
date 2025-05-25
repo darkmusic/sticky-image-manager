@@ -106,21 +106,8 @@ public class ViewerController {
     }
 
     private ChangeListener<Number> getNumberChangeListener(Dimension2D newSize, double oldImageWidth, double oldImageHeight) {
-        double imageRatio = newSize.getWidth() / newSize.getHeight();
-
-        ChangeListener<Number> listener = (obs, ov, nv) -> {
-            double paneWidth = stage.getScene().getWidth();
+        ChangeListener<Number> listener = (_, _, _) -> {
             double paneHeight = stage.getScene().getHeight();
-            double paneRatio = paneWidth / paneHeight;
-            double newImageWidth = oldImageWidth, newImageHeight = oldImageHeight;
-
-            if (paneRatio > imageRatio) {
-                newImageHeight = oldImageWidth / paneRatio;
-            } else if (paneRatio < imageRatio) {
-                newImageWidth = oldImageHeight * paneRatio;
-            }
-            //imageView.setViewport(new Rectangle2D((oldImageWidth - newImageWidth) / 2, (oldImageHeight - newImageHeight) / 2, newImageWidth, newImageHeight));
-            //imageView.setFitWidth(paneWidth);
             imageView.setFitHeight(paneHeight);
         };
         return listener;
@@ -138,7 +125,7 @@ public class ViewerController {
         imageView.setSmooth(true);
         imageView.setCache(true);
 
-        ChangeListener<Image> imageChangeListener = (obs, oldImage, newImage) -> {
+        ChangeListener<Image> imageChangeListener = (_, _, newImage) -> {
             if (newImage != null) {
                 try {
                     Metadata metadata = ImageMetadataReader.readMetadata(new File(filePath));

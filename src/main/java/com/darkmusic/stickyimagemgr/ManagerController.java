@@ -142,7 +142,7 @@ public class ManagerController {
                 click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
                 file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
                 Animated GIF image playback is supported.
-                You can toggle the stage decorations with 'Toggle Decorations', which will apply when you relaunch instances.
+                You can toggle the stage decorations with 'Toggle Decorations', which will automatically relaunch the instances.
                 Exit the application with 'Exit'.
                 """);
         helpMenu.getItems().add(helpMenuItem);
@@ -165,7 +165,9 @@ public class ManagerController {
         var toggleDecorationsMenuItem = new MenuItem("Toggle Decorations");
         toggleDecorationsMenuItem.setOnAction(_ -> {
             currentStageStyle = (currentStageStyle == StageStyle.UNDECORATED) ? StageStyle.DECORATED : StageStyle.UNDECORATED;
-            logText("Toggling stage decorations to: " + currentStageStyle + ". Please kill and relaunch instances to apply.");
+            logText("Toggling stage decorations to: " + currentStageStyle + ". Relaunching instances...");
+            handleKillAction();
+            handleLaunchAction();
         });
         return toggleDecorationsMenuItem;
     }

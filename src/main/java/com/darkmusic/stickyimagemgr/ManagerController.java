@@ -15,6 +15,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +37,7 @@ public class ManagerController {
     private AppPreferences appPreferences;
     private String appSettingsPath;
     private String lastUsedDirectory;
+    private StageStyle currentStageStyle = StageStyle.UNDECORATED;
 
     public String getLastUsedDirectory() {
         return lastUsedDirectory;
@@ -129,46 +131,55 @@ public class ManagerController {
         launchMenuItem.setOnAction(_ -> handleLaunchAction());
         var killMenuItem = new MenuItem("Kill");
         killMenuItem.setOnAction(_ -> handleKillAction());
-        actionMenu.getItems().addAll(launchMenuItem, killMenuItem);
+        var toggleDecorationsMenuItem = getToggleDecorationsMenuItem();
+        actionMenu.getItems().addAll(launchMenuItem, killMenuItem, toggleDecorationsMenuItem);
 
         var helpMenu = new Menu("Help");
-        var helpMenuItem = new MenuItem("Help");
-        helpMenuItem.setOnAction(_ -> {
-            var alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Help");
-            alert.setHeaderText("Sticky Image Manager Help");
-            alert.setContentText("""
-                    This is a simple application that allows you to manage and launch multiple instances of a Viewer.
-                    To use this application, create a new config file or open an existing one.
-                    After loading a config file, set the number of instances in the 'Window Count' text field and
-                    click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
-                    file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
-                    Animated GIF image playback is supported.
-                    Exit the application with 'Exit'.
-                    """);
-            alert.showAndWait();
-        });
+        var helpMenuItem = getHelpMenuItem("Help", "Sticky Image Manager Help", """
+                This is a simple application that allows you to manage and launch multiple instances of a Viewer.
+                To use this application, create a new config file or open an existing one.
+                After loading a config file, set the number of instances in the 'Window Count' text field and
+                click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
+                file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
+                Animated GIF image playback is supported.
+                You can toggle the stage decorations with 'Toggle Decorations', which will apply when you relaunch instances.
+                Exit the application with 'Exit'.
+                """);
         helpMenu.getItems().add(helpMenuItem);
 
-        var aboutMenuItem = new MenuItem("About");
-        aboutMenuItem.setOnAction(_ -> {
-            var alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("About");
-            alert.setHeaderText("Sticky Image Manager");
-            alert.setContentText("""
-                    Version 1.0
-
-                    Sticky Image Manager is a simple application that allows you to manage and launch multiple instances of a Viewer window.
-
-                    Developed by Thomas Johnson, and written in Java using JavaFX.
-                    """);
-            alert.showAndWait();
-        });
+        var aboutMenuItem = getHelpMenuItem("About", "Sticky Image Manager", """
+                Version 1.0
+                
+                Sticky Image Manager is a simple application that allows you to manage and launch multiple instances of a Viewer window.
+                
+                Developed by Thomas Johnson, and written in Java using JavaFX.
+                """);
         helpMenu.getItems().add(aboutMenuItem);
 
         var menuBar = new MenuBar(fileMenu, actionMenu, helpMenu);
         menuBar.getStyleClass().add("menu-bar");
         return menuBar;
+    }
+
+    private MenuItem getToggleDecorationsMenuItem() {
+        var toggleDecorationsMenuItem = new MenuItem("Toggle Decorations");
+        toggleDecorationsMenuItem.setOnAction(_ -> {
+            currentStageStyle = (currentStageStyle == StageStyle.UNDECORATED) ? StageStyle.DECORATED : StageStyle.UNDECORATED;
+            logText("Toggling stage decorations to: " + currentStageStyle + ". Please kill and relaunch instances to apply.");
+        });
+        return toggleDecorationsMenuItem;
+    }
+
+    private static MenuItem getHelpMenuItem(String Help, String Sticky_Image_Manager_Help, String contentText) {
+        var helpMenuItem = new MenuItem(Help);
+        helpMenuItem.setOnAction(_ -> {
+            var alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(Help);
+            alert.setHeaderText(Sticky_Image_Manager_Help);
+            alert.setContentText(contentText);
+            alert.showAndWait();
+        });
+        return helpMenuItem;
     }
 
     private void updateOpenRecentMenu() {
@@ -370,6 +381,7 @@ public class ManagerController {
             viewerController.getStage().setScene(scene);
             viewerController.getStage().setMaxWidth(viewerPrefs.getSizeW());
             viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH());
+            viewerController.getStage().initStyle(currentStageStyle);
             viewerController.getStage().show();
             viewerController.safeMove(new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY()), new Dimension2D(viewerPrefs.getSizeW(), viewerPrefs.getSizeH()));
             viewerController.getStage().setMaxWidth(Double.MAX_VALUE);

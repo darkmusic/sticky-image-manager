@@ -38,7 +38,7 @@ You can resize images if needed by dragging a corner or a side.  It will maintai
 
 #### Building
 
-1. Install JDK 23 (GraalVM-CE-23.0.2 has been confirmed to work) and Maven.
+1. Install JDK 24 (GraalVM-CE-24.0.1+9.1 has been confirmed to work) and Maven.
 2. Make sure your JAVA_HOME is set to the correct JDK version:
 
    ```bash

@@ -1,4 +1,4 @@
-### Sticky Image Manager
+# Sticky Image Manager
 
 [![Maven Package](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven-publish.yml/badge.svg)](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven-publish.yml)[![Java CI with Maven](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven.yml/badge.svg)](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven.yml)
 
@@ -36,46 +36,29 @@ It supports some basic EXIF rotation if present, but isn't perfect as rotated im
 
 You can resize images if needed by dragging a corner or a side.  It will maintain the aspect ratio of the image.
 
-#### Building
+## Building
 
 1. Install JDK 24 (GraalVM-CE-24.0.1+9.1 has been confirmed to work) and Maven.
-2. Make sure your JAVA_HOME is set to the correct JDK version:
+2. Make sure your JAVA_HOME is set in `justfile`.
 
    ```bash
-   export JAVA_HOME=/path/to/your/jdk
+   export JAVA_HOME := /path/to/your/jdk
    ```
 
-   or on Windows:
-
-   ```bash
-   set JAVA_HOME=C:\path\to\your\jdk
-   ```
-
-3. Also ensure your PATH variable points to the correct Java binary. For example, on Unix-like systems:
-
-   ```bash
-   export PATH=$JAVA_HOME/bin:$PATH
-   ```
-
-   On Windows:
-
-   ```bash
-   set PATH=%JAVA_HOME%\bin;%PATH%
-   ```
-
+3. Install [Just](https://just.systems/) if you don't have it already.
 4. In the project root, run:
 
    ```bash
    just build
    ```
 
-#### Running
+## Running
 
 ```bash
 just run
 ```
 
-#### System Requirements
+## System Requirements
 
 - Java Runtime, currently tested with Java 24 (GraalVM-24.0.1+9.1)
 - OS: Windows, Linux, MacOS

@@ -382,10 +382,21 @@ public class ManagerController {
             viewerController.getStage().setTitle("Sticky Image Viewer " + i);
             viewerController.getStage().setScene(scene);
             viewerController.getStage().setMaxWidth(viewerPrefs.getSizeW());
-            viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH());
+            var y_offset = 28; // Offset for undecorated window to account for missing title bar
+            if (currentStageStyle == StageStyle.UNDECORATED) {
+                viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH() - y_offset);
+            }
+            else {
+                viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH());
+            }
             viewerController.getStage().initStyle(currentStageStyle);
             viewerController.getStage().show();
-            viewerController.safeMove(new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY()), new Dimension2D(viewerPrefs.getSizeW(), viewerPrefs.getSizeH()));
+            if (currentStageStyle == StageStyle.UNDECORATED) {
+                viewerController.safeMove(new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY() + y_offset), new Dimension2D(viewerPrefs.getSizeW(), viewerPrefs.getSizeH() - y_offset));
+            }
+            else {
+                viewerController.safeMove(new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY()), new Dimension2D(viewerPrefs.getSizeW(), viewerPrefs.getSizeH()));
+            }
             viewerController.getStage().setMaxWidth(Double.MAX_VALUE);
             viewerController.getStage().setMaxHeight(Double.MAX_VALUE);
             viewerControllers.add(viewerController);

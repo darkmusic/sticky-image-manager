@@ -98,7 +98,11 @@ public class ViewerController {
         stage.setWidth(newSize.getWidth());
         stage.setHeight(newSize.getHeight());
         if (imageView == null) return;
-        imageView.setFitHeight(newSize.getHeight());
+        if (newSize.getHeight() > image.getHeight()) {
+            imageView.setFitWidth(image.getWidth());
+        } else {
+            imageView.setFitHeight(newSize.getHeight());
+        }
         double oldImageWidth = newSize.getWidth(), oldImageHeight = newSize.getHeight();
         ChangeListener<Number> listener = getNumberChangeListener(newSize, oldImageWidth, oldImageHeight);
         stage.widthProperty().addListener(listener);

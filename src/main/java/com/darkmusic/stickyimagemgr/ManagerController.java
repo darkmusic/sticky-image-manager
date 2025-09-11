@@ -283,7 +283,7 @@ public class ManagerController {
         }
     }
 
-    private void handleOpenRecentFile(String file) {
+    protected void handleOpenRecentFile(String file) {
         handleKillAction();
         // Check if file exists
         if (!new File(file).exists()) {
@@ -416,7 +416,7 @@ public class ManagerController {
         viewerControllers.clear();
     }
 
-    public void loadAppPrefs(String appSettingsPath) {
+    public AppPreferences loadAppPrefs(String appSettingsPath) {
         try {
             var mapper = new ObjectMapper();
             mapper.readValue(new File(appSettingsPath), AppPreferences.class);
@@ -430,5 +430,6 @@ public class ManagerController {
             logText(Arrays.toString(e.getStackTrace()));
             setAppPreferences(new AppPreferences(), appSettingsPath);
         }
+        return appPreferences;
     }
 }

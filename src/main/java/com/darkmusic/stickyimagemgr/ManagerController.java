@@ -309,6 +309,10 @@ public class ManagerController {
                 logText("Please select new or open a config file.");
                 return;
             }
+            if (appliedUndecoratedOffset) {
+                logText("Please toggle decorations back to decorated before saving.");
+                return;
+            }
 
             var mapper = new ObjectMapper();
             mapper.enable(SerializationFeature.INDENT_OUTPUT);

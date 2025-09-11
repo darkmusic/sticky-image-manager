@@ -40,6 +40,7 @@ public class ManagerController {
     private StageStyle currentStageStyle = StageStyle.UNDECORATED;
     private final int y_offset = 28; // Offset for undecorated window to account for missing title bar
     private boolean appliedUndecoratedOffset = false;
+    private boolean previouslyAppliedUndecoratedOffset = false;
 
     public String getLastUsedDirectory() {
         return lastUsedDirectory;
@@ -367,10 +368,10 @@ public class ManagerController {
             logText("Invalid window count: " + windowCountTextField.getText());
             return;
         }
-        for (int i = 0; i < instanceCount; i++) {
+        for (int i = 1; i <= instanceCount; i++) {
             ViewerPrefs viewerPrefs;
             try {
-                viewerPrefs = managerPrefs.getViewerPrefList().get(i);
+                viewerPrefs = managerPrefs.getViewerPrefList().get(i - 1);
             }
             catch (NullPointerException | IndexOutOfBoundsException e) {
                 viewerPrefs = new ViewerPrefs();
@@ -388,13 +389,20 @@ public class ManagerController {
                 viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH() - y_offset);
             }
             else {
-                viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH());
+                if (previouslyAppliedUndecoratedOffset) {
+                    viewerPrefs.setLocationY(viewerPrefs.getLocationY() + y_offset);
+                    previouslyAppliedUndecoratedOffset = false;
+                }
+                else {
+                    viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH());
+                }
             }
             viewerController.getStage().initStyle(currentStageStyle);
             viewerController.getStage().show();
             if (currentStageStyle == StageStyle.UNDECORATED) {
                 viewerController.safeMove(new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY() + y_offset), new Dimension2D(viewerPrefs.getSizeW(), viewerPrefs.getSizeH() - y_offset));
                 appliedUndecoratedOffset = true;
+                previouslyAppliedUndecoratedOffset = true;
             }
             else {
                 if (appliedUndecoratedOffset) {
@@ -405,6 +413,11 @@ public class ManagerController {
             }
             viewerController.getStage().setMaxWidth(Double.MAX_VALUE);
             viewerController.getStage().setMaxHeight(Double.MAX_VALUE);
+
+            // If no image path is set, move to default location and set default size
+            if (viewerPrefs.getImagePath() == null) {
+                viewerController.safeMove(new Point2D(managerPrefs.getLocationX(), managerPrefs.getLocationY()), new Dimension2D(300, 300));
+            }
             viewerControllers.add(viewerController);
         }
     }

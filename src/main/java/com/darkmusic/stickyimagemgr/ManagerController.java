@@ -150,13 +150,18 @@ public class ManagerController {
                 """);
         helpMenu.getItems().add(helpMenuItem);
 
-        var aboutMenuItem = getHelpMenuItem("About", "Sticky Image Manager", """
+        var javaVersion = System.getProperty("java.version");
+        var javafxVersion = System.getProperty("javafx.version");
+        var aboutMenuItem = getHelpMenuItem("About", "Sticky Image Manager", String.format("""
                 Version 1.0
-                
+
                 Sticky Image Manager is a simple application that allows you to manage and launch multiple instances of a Viewer window.
-                
+
                 Developed by Thomas Johnson, and written in Java using JavaFX.
-                """);
+
+                Java version: %s
+                JavaFX version: %s
+                """, javaVersion, javafxVersion));
         helpMenu.getItems().add(aboutMenuItem);
 
         var menuBar = new MenuBar(fileMenu, actionMenu, helpMenu);

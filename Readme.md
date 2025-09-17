@@ -2,7 +2,7 @@
 
 [![Maven Package](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven-publish.yml/badge.svg)](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven-publish.yml)[![Java CI with Maven](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven.yml/badge.svg)](https://github.com/darkmusic/sticky-image-manager/actions/workflows/maven.yml)
 
-This is an application that allows you to manage and launch multiple instances of a Viewer.  It is written in Java 24 and uses JavaFX for the UI.
+This is an application that allows you to manage and launch multiple instances of a Viewer.  It is written in Java 25 and uses JavaFX for the UI.
 
 It is designed to add some ambience to your desktop (if you have the available screen space).
 
@@ -34,11 +34,11 @@ It consists of two parts:
 
 It supports some basic EXIF rotation if present, but isn't perfect as rotated images have a bit of a white border on the left side that I haven't been able to get rid of yet.
 
-You can resize images if needed by dragging a corner or a side.  It will maintain the aspect ratio of the image.
+You can resize images if needed by dragging a corner or a side while in "decorated" mode.  It will maintain the aspect ratio of the image.
 
 ## Building
 
-1. Install JDK 24 (GraalVM-CE-24.0.1+9.1 has been confirmed to work) and Maven.
+1. Install JDK 25 (GraalVM JDK 25+37.1 has been confirmed to work) and Maven.
 2. Make sure your JAVA_HOME is set in `justfile`.
 
    ```bash
@@ -60,6 +60,26 @@ just run
 
 ## System Requirements
 
-- Java Runtime, currently tested with Java 24 (GraalVM-24.0.1+9.1)
+- Java Runtime, currently tested with Java 25 (GraalVM-25+37.1)
+- Maven
 - OS: Windows, Linux, MacOS
 - Just CLI tool (for building and running)
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Roadmap
+- [ ] Support movement and resizing in undecorated mode
+- [ ] Remove decorated mode once functionality has been confirmed in undecorated mode
+- [ ] Improve resizing logic so no filling is needed
+- [ ] Fix EXIF rotation issues
+- [ ] Add drag-and-drop support
+- [ ] Add support for multiple images per viewer (slideshow)
+- [ ] Add support for video files
+- [ ] Add support for image transitions
+- [ ] Add support for image effects (grayscale, sepia, etc.)
+- [ ] Find replacement for metadata-extractor, as this currently results in a "required filename-based automodules" warning during the build
+- [ ] Fix other build warnings such as `sun.misc.Unsafe::allocateMemory`
+- [ ] Create release build with jlink
+- [ ] Create installer for Windows, MacOS, and Linux
+- [ ] Add more documentation

@@ -133,20 +133,19 @@ public class ManagerController {
         launchMenuItem.setOnAction(_ -> handleLaunchAction());
         var killMenuItem = new MenuItem("Kill");
         killMenuItem.setOnAction(_ -> handleKillAction());
-        var toggleDecorationsMenuItem = getToggleDecorationsMenuItem();
-        actionMenu.getItems().addAll(launchMenuItem, killMenuItem, toggleDecorationsMenuItem);
+    actionMenu.getItems().addAll(launchMenuItem, killMenuItem);
 
         var helpMenu = new Menu("Help");
-        var helpMenuItem = getHelpMenuItem("Help", "Sticky Image Manager Help", """
-                This is a simple application that allows you to manage and launch multiple instances of a Viewer.
-                To use this application, create a new config file or open an existing one.
-                After loading a config file, set the number of instances in the 'Window Count' text field and
-                click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
-                file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
-                Animated GIF image playback is supported.
-                You can toggle the stage decorations with 'Toggle Decorations', which will automatically relaunch the instances.
-                Exit the application with 'Exit'.
-                """);
+    var helpMenuItem = getHelpMenuItem("Help", "Sticky Image Manager Help", """
+        This is a simple application that allows you to manage and launch multiple instances of a Viewer.
+        To use this application, create a new config file or open an existing one.
+        After loading a config file, set the number of instances in the 'Window Count' text field and
+        click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
+        file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
+        Animated GIF image playback is supported.
+        Viewers run in undecorated mode: move by dragging the window, resize by dragging edges/corners.
+        Exit the application with 'Exit'.
+        """);
         helpMenu.getItems().add(helpMenuItem);
 
         var javaVersion = System.getProperty("java.version");
@@ -168,16 +167,7 @@ public class ManagerController {
         return menuBar;
     }
 
-    private MenuItem getToggleDecorationsMenuItem() {
-        var toggleDecorationsMenuItem = new MenuItem("Toggle Decorations");
-        toggleDecorationsMenuItem.setOnAction(_ -> {
-            currentStageStyle = (currentStageStyle == StageStyle.UNDECORATED) ? StageStyle.DECORATED : StageStyle.UNDECORATED;
-            logText("Toggling stage decorations to: " + currentStageStyle + ". Relaunching instances...");
-            handleKillAction();
-            handleLaunchAction();
-        });
-        return toggleDecorationsMenuItem;
-    }
+    // Decorated mode removed: always use UNDECORATED
 
     private static MenuItem getHelpMenuItem(String Help, String Sticky_Image_Manager_Help, String contentText) {
         var helpMenuItem = new MenuItem(Help);
@@ -313,11 +303,6 @@ public class ManagerController {
                 logText("Please select new or open a config file.");
                 return;
             }
-            // Block save while in undecorated mode (offset active)
-            if (currentStageStyle == StageStyle.UNDECORATED) {
-                logText("Please toggle decorations back to decorated before saving.");
-                return;
-            }
 
             var mapper = new ObjectMapper();
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -364,6 +349,15 @@ public class ManagerController {
         System.exit(0);
     }
 
+    // Expose current stage style for viewers to tailor behavior (e.g., undecorated move/resize)
+    public StageStyle getCurrentStageStyle() {
+        return currentStageStyle;
+    }
+
+    public int getYOffset() {
+        return y_offset;
+    }
+
     private void handleLaunchAction() {
         if (managerPrefs == null) {
             logText("Please select new or open a config file.");
@@ -396,6 +390,8 @@ public class ManagerController {
             viewerController.getStage().setMaxWidth(viewerPrefs.getSizeW());
             int adjustedHeight = viewerPrefs.getSizeH() - (currentStageStyle == StageStyle.UNDECORATED ? y_offset : 0);
             viewerController.getStage().setMaxHeight(Math.max(0, adjustedHeight));
+            // Always use undecorated style
+            currentStageStyle = StageStyle.UNDECORATED;
             viewerController.getStage().initStyle(currentStageStyle);
             viewerController.getStage().show();
 

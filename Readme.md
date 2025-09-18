@@ -69,8 +69,8 @@ just run
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Roadmap
-- [ ] Support movement and resizing in undecorated mode
-- [ ] Remove decorated mode once functionality has been confirmed in undecorated mode
+- [X] Support movement and resizing in undecorated mode
+- [X] Remove decorated mode once functionality has been confirmed in undecorated mode
 - [ ] Improve resizing logic so no filling is needed
 - [ ] Fix EXIF rotation issues
 - [ ] Add drag-and-drop support

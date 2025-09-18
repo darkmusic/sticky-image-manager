@@ -10,7 +10,7 @@ Features:
 
 - Allows individual image viewers to be resized and repositioned as desired
 - Remembers positions, images, and sizes so they can be restored upon the next launch
-- Supports basic EXIF rotation
+- Supports EXIF rotation
 - Stores recent images in a list for easy access
 - Remembers the last directory when browsing for an image in the viewer's file dialog
 - Supports GIF animations
@@ -32,9 +32,9 @@ It consists of two parts:
 
 ![Sticky Image Viewer](res/Viewer.png)
 
-It supports some basic EXIF rotation if present, but isn't perfect as rotated images have a bit of a white border on the left side that I haven't been able to get rid of yet.
+It supports EXIF rotation if present.
 
-You can resize images if needed by dragging a corner or a side while in "decorated" mode.  It will maintain the aspect ratio of the image.
+You can resize images if needed by dragging a corner or a side.  It will maintain the aspect ratio of the image.
 
 ## Building
 
@@ -71,8 +71,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Roadmap
 - [X] Support movement and resizing in undecorated mode
 - [X] Remove decorated mode once functionality has been confirmed in undecorated mode
-- [ ] Improve resizing logic so no filling is needed
-- [ ] Fix EXIF rotation issues
+- [X] Improve resizing logic so no filling is needed
+- [X] Fix EXIF rotation issues
 - [ ] Add drag-and-drop support
 - [ ] Add support for multiple images per viewer (slideshow)
 - [ ] Add support for video files

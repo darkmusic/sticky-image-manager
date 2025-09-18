@@ -39,8 +39,7 @@ public class ManagerController {
     private String lastUsedDirectory;
     private StageStyle currentStageStyle = StageStyle.UNDECORATED;
     private final int y_offset = 28; // Offset for undecorated window to account for missing title bar
-    private boolean appliedUndecoratedOffset = false;
-    private boolean previouslyAppliedUndecoratedOffset = false;
+
 
     public String getLastUsedDirectory() {
         return lastUsedDirectory;
@@ -314,7 +313,8 @@ public class ManagerController {
                 logText("Please select new or open a config file.");
                 return;
             }
-            if (appliedUndecoratedOffset) {
+            // Block save while in undecorated mode (offset active)
+            if (currentStageStyle == StageStyle.UNDECORATED) {
                 logText("Please toggle decorations back to decorated before saving.");
                 return;
             }
@@ -394,38 +394,27 @@ public class ManagerController {
             viewerController.getStage().setTitle("Sticky Image Viewer " + i);
             viewerController.getStage().setScene(scene);
             viewerController.getStage().setMaxWidth(viewerPrefs.getSizeW());
-            if (currentStageStyle == StageStyle.UNDECORATED) {
-                viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH() - y_offset);
-            }
-            else {
-                if (previouslyAppliedUndecoratedOffset) {
-                    viewerPrefs.setLocationY(viewerPrefs.getLocationY() + y_offset);
-                    previouslyAppliedUndecoratedOffset = false;
-                }
-                else {
-                    viewerController.getStage().setMaxHeight(viewerPrefs.getSizeH());
-                }
-            }
+            int adjustedHeight = viewerPrefs.getSizeH() - (currentStageStyle == StageStyle.UNDECORATED ? y_offset : 0);
+            viewerController.getStage().setMaxHeight(Math.max(0, adjustedHeight));
             viewerController.getStage().initStyle(currentStageStyle);
             viewerController.getStage().show();
-            if (currentStageStyle == StageStyle.UNDECORATED) {
-                viewerController.safeMove(new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY() + y_offset), new Dimension2D(viewerPrefs.getSizeW(), viewerPrefs.getSizeH() - y_offset));
-                appliedUndecoratedOffset = true;
-                previouslyAppliedUndecoratedOffset = true;
-            }
-            else {
-                if (appliedUndecoratedOffset) {
-                    viewerPrefs.setLocationY(viewerPrefs.getLocationY() - y_offset);
-                    appliedUndecoratedOffset = false;
-                }
-                viewerController.safeMove(new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY()), new Dimension2D(viewerPrefs.getSizeW(), viewerPrefs.getSizeH()));
-            }
+
+            // Position using a consistent per-viewer calculation; do not mutate stored prefs
+            int adjustedY = viewerPrefs.getLocationY() + (currentStageStyle == StageStyle.UNDECORATED ? y_offset : 0);
+            viewerController.safeMove(
+                    new Point2D(viewerPrefs.getLocationX(), adjustedY),
+                    new Dimension2D(viewerPrefs.getSizeW(), Math.max(0, adjustedHeight))
+            );
             viewerController.getStage().setMaxWidth(Double.MAX_VALUE);
             viewerController.getStage().setMaxHeight(Double.MAX_VALUE);
 
             // If no image path is set, move to default location and set default size
             if (viewerPrefs.getImagePath() == null) {
-                viewerController.safeMove(new Point2D(managerPrefs.getLocationX(), managerPrefs.getLocationY()), new Dimension2D(300, 300));
+                int defaultH = 300 - (currentStageStyle == StageStyle.UNDECORATED ? y_offset : 0);
+                viewerController.safeMove(
+                        new Point2D(managerPrefs.getLocationX(), managerPrefs.getLocationY() + (currentStageStyle == StageStyle.UNDECORATED ? y_offset : 0)),
+                        new Dimension2D(300, Math.max(0, defaultH))
+                );
             }
             viewerControllers.add(viewerController);
         }

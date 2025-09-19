@@ -22,6 +22,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Screen;
@@ -194,6 +197,7 @@ public class ViewerController {
                 stage.setScene(scene);
             }
             installContainFitHandlers();
+            installDragAndDropHandlers();
             Platform.runLater(this::updateFitBindings);
             if (stage != null) {
                 stage.widthProperty().addListener((obs, o, n) -> updateFitBindings());
@@ -211,6 +215,83 @@ public class ViewerController {
             });
         }
         viewerPrefs.setImagePath(filePath);
+    }
+
+    private void installDragAndDropHandlers() {
+        if (root == null) return;
+        root.setOnDragOver((DragEvent event) -> {
+            Dragboard db = event.getDragboard();
+            boolean accept = false;
+            if (db.hasFiles()) {
+                for (java.io.File f : db.getFiles()) {
+                    if (isAcceptableImageFile(f)) { accept = true; break; }
+                }
+            } else if (db.hasUrl()) {
+                accept = isAcceptableImagePath(db.getUrl());
+            } else if (db.hasString()) {
+                accept = isAcceptableImagePath(db.getString());
+            }
+            if (accept) {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            event.consume();
+        });
+
+        root.setOnDragDropped((DragEvent event) -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            try {
+                if (db.hasFiles()) {
+                    for (java.io.File f : db.getFiles()) {
+                        if (isAcceptableImageFile(f)) {
+                            handleImageOpen(f.getAbsolutePath(), false);
+                            if (parent != null) parent.setLastUsedDirectory(f.getParent());
+                            success = true;
+                            break;
+                        }
+                    }
+                } else if (db.hasUrl()) {
+                    String url = db.getUrl();
+                    if (isAcceptableImagePath(url) && url.startsWith("file:")) {
+                        java.nio.file.Path p = java.nio.file.Paths.get(java.net.URI.create(url));
+                        handleImageOpen(p.toAbsolutePath().toString(), false);
+                        if (parent != null && p.getParent() != null) parent.setLastUsedDirectory(p.getParent().toString());
+                        success = true;
+                    }
+                } else if (db.hasString()) {
+                    String s = db.getString();
+                    if (isAcceptableImagePath(s)) {
+                        if (s.startsWith("file:")) {
+                            java.nio.file.Path p = java.nio.file.Paths.get(java.net.URI.create(s));
+                            handleImageOpen(p.toAbsolutePath().toString(), false);
+                            if (parent != null && p.getParent() != null) parent.setLastUsedDirectory(p.getParent().toString());
+                            success = true;
+                        } else {
+                            java.io.File f = new java.io.File(s);
+                            if (f.exists() && isAcceptableImageFile(f)) {
+                                handleImageOpen(f.getAbsolutePath(), false);
+                                if (parent != null) parent.setLastUsedDirectory(f.getParent());
+                                success = true;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+            event.setDropCompleted(success);
+            event.consume();
+        });
+    }
+
+    private boolean isAcceptableImageFile(java.io.File f) {
+        if (f == null || !f.isFile()) return false;
+        return isAcceptableImagePath(f.getName());
+    }
+
+    private boolean isAcceptableImagePath(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase();
+        return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                || lower.endsWith(".gif") || lower.endsWith(".bmp");
     }
 
     private void autoFitStageToImage() {

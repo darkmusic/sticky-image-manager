@@ -36,6 +36,13 @@ It supports EXIF rotation if present.
 
 You can resize images if needed by dragging a corner or a side.  It will maintain the aspect ratio of the image.
 
+### Drag and Drop
+
+- You can drag an image file from your OS (Explorer/Finder/Nautilus) directly onto a viewer to load it.
+- Supported formats: PNG, JPG/JPEG, GIF, BMP.
+- The viewer reuses its existing window (no reset), so custom move/resize remains active.
+- The last-used directory is updated on successful drop and is remembered by the File Open dialog.
+
 ## Building
 
 1. Install JDK 25 (GraalVM JDK 25+37.1 has been confirmed to work) and Maven.
@@ -73,7 +80,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [X] Remove decorated mode once functionality has been confirmed in undecorated mode
 - [X] Improve resizing logic so no filling is needed
 - [X] Fix EXIF rotation issues
-- [ ] Add drag-and-drop support
+- [X] Add drag-and-drop support
 - [ ] Add support for multiple images per viewer (slideshow)
 - [ ] Add support for video files
 - [ ] Add support for image transitions

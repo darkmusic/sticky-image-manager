@@ -38,7 +38,7 @@ public class ManagerController {
     private String appSettingsPath;
     private String lastUsedDirectory;
     private StageStyle currentStageStyle = StageStyle.UNDECORATED;
-
+    private boolean areViewersLaunched = false;
 
     public String getLastUsedDirectory() {
         return lastUsedDirectory;
@@ -79,7 +79,8 @@ public class ManagerController {
 
     Region createContent() {
         var root = new BorderPane();
-        root.getStylesheets().add(Objects.requireNonNull(this.getClass().getResource("/css/main.css")).toExternalForm());
+        root.getStylesheets()
+                .add(Objects.requireNonNull(this.getClass().getResource("/css/main.css")).toExternalForm());
         root.setTop(createMenuBar());
 
         var currentFileLabel = new Label("Current File:");
@@ -125,40 +126,44 @@ public class ManagerController {
         saveAsMenuItem.setOnAction(_ -> handleSaveAsAction());
         var exitMenuItem = new MenuItem("Exit");
         exitMenuItem.setOnAction(_ -> handleExitAction());
-        fileMenu.getItems().addAll(newMenuItem, openMenuItem, openRecentMenu, saveMenuItem, saveAsMenuItem, exitMenuItem);
+        fileMenu.getItems().addAll(newMenuItem, openMenuItem, openRecentMenu, saveMenuItem, saveAsMenuItem,
+                exitMenuItem);
 
         var actionMenu = new Menu("Action");
         var launchMenuItem = new MenuItem("Launch");
         launchMenuItem.setOnAction(_ -> handleLaunchAction());
         var killMenuItem = new MenuItem("Kill");
         killMenuItem.setOnAction(_ -> handleKillAction());
-    actionMenu.getItems().addAll(launchMenuItem, killMenuItem);
+        actionMenu.getItems().addAll(launchMenuItem, killMenuItem);
 
         var helpMenu = new Menu("Help");
-    var helpMenuItem = getHelpMenuItem("Help", "Sticky Image Manager Help", """
-        This is a simple application that allows you to manage and launch multiple instances of a Viewer.
-        To use this application, create a new config file or open an existing one.
-        After loading a config file, set the number of instances in the 'Window Count' text field and
-        click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
-        file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
-        Animated GIF image playback is supported.
-        Viewers run in undecorated mode: move by dragging the window, resize by dragging edges/corners.
-        Exit the application with 'Exit'.
-        """);
+        var helpMenuItem = getHelpMenuItem("Help", "Sticky Image Manager Help", """
+                This is a simple application that allows you to manage and launch multiple instances of a Viewer.
+                To use this application, create a new config file or open an existing one.
+                After loading a config file, set the number of instances in the 'Window Count' text field and
+                click 'Launch' to start the Viewer instances. Use 'Kill' to close all instances. Save the config
+                file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
+                Animated GIF image playback is supported.
+                Viewers run in undecorated mode: move by dragging the window, resize by dragging edges/corners.
+                Exit the application with 'Exit'.
+                """);
         helpMenu.getItems().add(helpMenuItem);
 
         var javaVersion = System.getProperty("java.version");
         var javafxVersion = System.getProperty("javafx.version");
-        var aboutMenuItem = getHelpMenuItem("About", "Sticky Image Manager", String.format("""
-                Version 1.0
+        var aboutMenuItem = getHelpMenuItem("About", "Sticky Image Manager",
+                String.format(
+                        """
+                                Version 1.0
 
-                Sticky Image Manager is a simple application that allows you to manage and launch multiple instances of a Viewer window.
+                                Sticky Image Manager is a simple application that allows you to manage and launch multiple instances of a Viewer window.
 
-                Developed by Thomas Johnson, and written in Java using JavaFX.
+                                Developed by Thomas Johnson, and written in Java using JavaFX.
 
-                Java version: %s
-                JavaFX version: %s
-                """, javaVersion, javafxVersion));
+                                Java version: %s
+                                JavaFX version: %s
+                                """,
+                        javaVersion, javafxVersion));
         helpMenu.getItems().add(aboutMenuItem);
 
         var menuBar = new MenuBar(fileMenu, actionMenu, helpMenu);
@@ -193,17 +198,17 @@ public class ManagerController {
     }
 
     private void loadFileInfo(String filename) {
-      this.filename = filename;
-      // Use File to handle both Unix and Windows path separators
-      File file = new File(filename);
-      File parent = file.getParentFile();
-      String displayFilename;
-      if (parent != null) {
-        displayFilename = parent.getName() + File.separator + file.getName();
-      } else {
-        displayFilename = file.getName();
-      }
-      currentFileContent.setText(displayFilename);
+        this.filename = filename;
+        // Use File to handle both Unix and Windows path separators
+        File file = new File(filename);
+        File parent = file.getParentFile();
+        String displayFilename;
+        if (parent != null) {
+            displayFilename = parent.getName() + File.separator + file.getName();
+        } else {
+            displayFilename = file.getName();
+        }
+        currentFileContent.setText(displayFilename);
     }
 
     private void handleNewAction() {
@@ -246,7 +251,8 @@ public class ManagerController {
 
     private void loadFilePrefs(String prefsFilePath, boolean isReload) {
         try {
-            // If the file does not exist, assume we are creating a new file and init with default values
+            // If the file does not exist, assume we are creating a new file and init with
+            // default values
             if (!new File(prefsFilePath).exists()) {
                 logText("File does not exist, creating new file: " + prefsFilePath);
                 managerPrefs = new ManagerPrefs();
@@ -348,13 +354,18 @@ public class ManagerController {
         System.exit(0);
     }
 
-    // Expose current stage style for viewers to tailor behavior (e.g., undecorated move/resize)
+    // Expose current stage style for viewers to tailor behavior (e.g., undecorated
+    // move/resize)
     public StageStyle getCurrentStageStyle() {
         return currentStageStyle;
     }
 
-
     private void handleLaunchAction() {
+        if (areViewersLaunched) {
+            logText("Viewers are already launched. Please kill them before launching again.");
+            return;
+        }
+        areViewersLaunched = true;
         if (managerPrefs == null) {
             logText("Please select new or open a config file.");
             return;
@@ -371,8 +382,7 @@ public class ManagerController {
             ViewerPrefs viewerPrefs;
             try {
                 viewerPrefs = managerPrefs.getViewerPrefList().get(i - 1);
-            }
-            catch (NullPointerException | IndexOutOfBoundsException e) {
+            } catch (NullPointerException | IndexOutOfBoundsException e) {
                 viewerPrefs = new ViewerPrefs();
             }
             var viewerController = new ViewerController();
@@ -391,21 +401,20 @@ public class ManagerController {
             viewerController.getStage().initStyle(currentStageStyle);
             viewerController.getStage().show();
 
-            // Position using a consistent per-viewer calculation; do not mutate stored prefs
+            // Position using a consistent per-viewer calculation; do not mutate stored
+            // prefs
             viewerController.safeMove(
-                new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY()),
-                new Dimension2D(viewerPrefs.getSizeW(), Math.max(0, adjustedHeight))
-            );
+                    new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY()),
+                    new Dimension2D(viewerPrefs.getSizeW(), Math.max(0, adjustedHeight)));
             viewerController.getStage().setMaxWidth(Double.MAX_VALUE);
             viewerController.getStage().setMaxHeight(Double.MAX_VALUE);
 
             // If no image path is set, move to default location and set default size
             if (viewerPrefs.getImagePath() == null) {
-            int defaultH = 300;
-            viewerController.safeMove(
-                new Point2D(managerPrefs.getLocationX(), managerPrefs.getLocationY()),
-                new Dimension2D(300, Math.max(0, defaultH))
-            );
+                int defaultH = 300;
+                viewerController.safeMove(
+                        new Point2D(managerPrefs.getLocationX(), managerPrefs.getLocationY()),
+                        new Dimension2D(300, Math.max(0, defaultH)));
             }
             viewerControllers.add(viewerController);
         }
@@ -416,6 +425,8 @@ public class ManagerController {
             viewerController.getStage().close();
         }
         viewerControllers.clear();
+        areViewersLaunched = false;
+        logText("All viewer instances killed.");
     }
 
     public AppPreferences loadAppPrefs(String appSettingsPath) {

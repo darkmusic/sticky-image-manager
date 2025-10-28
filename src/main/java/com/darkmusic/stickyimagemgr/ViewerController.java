@@ -48,7 +48,11 @@ public class ViewerController {
 
     // Undecorated move/resize state
     private static final double EDGE = 6.0; // px edge hit area
-    private enum ResizeDir { NONE, N, S, E, W, NE, NW, SE, SW }
+
+    private enum ResizeDir {
+        NONE, N, S, E, W, NE, NW, SE, SW
+    }
+
     private ResizeDir activeResize = ResizeDir.NONE;
     private boolean moving = false;
     private double pressScreenX, pressScreenY;
@@ -91,9 +95,10 @@ public class ViewerController {
                 fileChooser.setInitialDirectory(new File(parent.getLastUsedDirectory()));
                 fileChooser.setInitialFileName("");
                 fileChooser.getExtensionFilters().addAll(
-                        new FileChooser.ExtensionFilter("Image Files", "*.png", "*.PNG", "*.jpg", "*.JPG", "*.gif", "*.GIF", "*.bmp", "*.BMP", "*.jpeg", "*.JPEG"),
-                        new FileChooser.ExtensionFilter("All Files", "*.*")
-                );
+                        new FileChooser.ExtensionFilter("Image Files", "*.png", "*.PNG", "*.jpg", "*.JPG", "*.gif",
+                                "*.GIF",
+                                "*.bmp", "*.BMP", "*.jpeg", "*.JPEG"),
+                        new FileChooser.ExtensionFilter("All Files", "*.*"));
                 var file = fileChooser.showOpenDialog(null);
                 if (file != null) {
                     // Reuse same scene/handlers; just swap the image
@@ -109,8 +114,7 @@ public class ViewerController {
         try {
             handleImageOpen(this.viewerPrefs.getImagePath(), false);
             parent.setLastUsedDirectory(new File(this.viewerPrefs.getImagePath()).getParent());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             System.out.println("Error loading image: " + e.getMessage());
             image = getDefaultImage();
         }
@@ -124,14 +128,18 @@ public class ViewerController {
     }
 
     void safeMove(Point2D newLocation, Dimension2D newSize) {
-        if (viewerPrefs == null) return;
+        if (viewerPrefs == null)
+            return;
         stage.setX(newLocation.getX());
         stage.setY(newLocation.getY());
         stage.setWidth(newSize.getWidth());
         stage.setHeight(newSize.getHeight());
     }
 
-    private ChangeListener<Number> getNumberChangeListener(Dimension2D newSize, double oldImageWidth, double oldImageHeight) { return null; }
+    private ChangeListener<Number> getNumberChangeListener(Dimension2D newSize, double oldImageWidth,
+            double oldImageHeight) {
+        return null;
+    }
 
     private void handleImageOpen(String filePath, boolean setStage) {
         // Load image and synchronously bake EXIF rotation
@@ -150,9 +158,9 @@ public class ViewerController {
                 if (directory != null && directory.containsTag(ExifDirectoryBase.TAG_ORIENTATION)) {
                     int orientation = directory.getInt(ExifDirectoryBase.TAG_ORIENTATION);
                     switch (orientation) {
-                        case 6 -> degrees = 90;   // 90 CW
-                        case 3 -> degrees = 180;  // 180
-                        case 8 -> degrees = 270;  // 90 CCW
+                        case 6 -> degrees = 90; // 90 CW
+                        case 3 -> degrees = 180; // 180
+                        case 8 -> degrees = 270; // 90 CCW
                         default -> degrees = 0;
                     }
                 }
@@ -218,13 +226,17 @@ public class ViewerController {
     }
 
     private void installDragAndDropHandlers() {
-        if (root == null) return;
+        if (root == null)
+            return;
         root.setOnDragOver((DragEvent event) -> {
             Dragboard db = event.getDragboard();
             boolean accept = false;
             if (db.hasFiles()) {
                 for (java.io.File f : db.getFiles()) {
-                    if (isAcceptableImageFile(f)) { accept = true; break; }
+                    if (isAcceptableImageFile(f)) {
+                        accept = true;
+                        break;
+                    }
                 }
             } else if (db.hasUrl()) {
                 accept = isAcceptableImagePath(db.getUrl());
@@ -245,7 +257,8 @@ public class ViewerController {
                     for (java.io.File f : db.getFiles()) {
                         if (isAcceptableImageFile(f)) {
                             handleImageOpen(f.getAbsolutePath(), false);
-                            if (parent != null) parent.setLastUsedDirectory(f.getParent());
+                            if (parent != null)
+                                parent.setLastUsedDirectory(f.getParent());
                             success = true;
                             break;
                         }
@@ -255,7 +268,8 @@ public class ViewerController {
                     if (isAcceptableImagePath(url) && url.startsWith("file:")) {
                         java.nio.file.Path p = java.nio.file.Paths.get(java.net.URI.create(url));
                         handleImageOpen(p.toAbsolutePath().toString(), false);
-                        if (parent != null && p.getParent() != null) parent.setLastUsedDirectory(p.getParent().toString());
+                        if (parent != null && p.getParent() != null)
+                            parent.setLastUsedDirectory(p.getParent().toString());
                         success = true;
                     }
                 } else if (db.hasString()) {
@@ -264,31 +278,36 @@ public class ViewerController {
                         if (s.startsWith("file:")) {
                             java.nio.file.Path p = java.nio.file.Paths.get(java.net.URI.create(s));
                             handleImageOpen(p.toAbsolutePath().toString(), false);
-                            if (parent != null && p.getParent() != null) parent.setLastUsedDirectory(p.getParent().toString());
+                            if (parent != null && p.getParent() != null)
+                                parent.setLastUsedDirectory(p.getParent().toString());
                             success = true;
                         } else {
                             java.io.File f = new java.io.File(s);
                             if (f.exists() && isAcceptableImageFile(f)) {
                                 handleImageOpen(f.getAbsolutePath(), false);
-                                if (parent != null) parent.setLastUsedDirectory(f.getParent());
+                                if (parent != null)
+                                    parent.setLastUsedDirectory(f.getParent());
                                 success = true;
                             }
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             event.setDropCompleted(success);
             event.consume();
         });
     }
 
     private boolean isAcceptableImageFile(java.io.File f) {
-        if (f == null || !f.isFile()) return false;
+        if (f == null || !f.isFile())
+            return false;
         return isAcceptableImagePath(f.getName());
     }
 
     private boolean isAcceptableImagePath(String path) {
-        if (path == null) return false;
+        if (path == null)
+            return false;
         String lower = path.toLowerCase();
         return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
                 || lower.endsWith(".gif") || lower.endsWith(".bmp");
@@ -296,10 +315,12 @@ public class ViewerController {
 
     private void autoFitStageToImage() {
         try {
-            if (stage == null || imageView == null || imageView.getImage() == null) return;
+            if (stage == null || imageView == null || imageView.getImage() == null)
+                return;
             double iw = imageView.getImage().getWidth();
             double ih = imageView.getImage().getHeight();
-            if (iw <= 0 || ih <= 0) return;
+            if (iw <= 0 || ih <= 0)
+                return;
             double aspect = iw / ih;
 
             double cw = imageContainer.getWidth();
@@ -310,10 +331,10 @@ public class ViewerController {
             }
 
             // Compute ideal dimension changes but never increase size; shrink only
-            double wFromH = ch * aspect;  // width that would match current height
-            double hFromW = cw / aspect;  // height that would match current width
+            double wFromH = ch * aspect; // width that would match current height
+            double hFromW = cw / aspect; // height that would match current width
 
-            boolean canShrinkWidth = wFromH < cw - 0.5;  // threshold to avoid jitter
+            boolean canShrinkWidth = wFromH < cw - 0.5; // threshold to avoid jitter
             boolean canShrinkHeight = hFromW < ch - 0.5;
 
             if (!canShrinkWidth && !canShrinkHeight) {
@@ -337,14 +358,17 @@ public class ViewerController {
         } catch (Exception ignored) {
         }
     }
+
     private Image rotateImage(Image src, int degrees) {
         PixelReader reader = src.getPixelReader();
         int w = (int) Math.round(src.getWidth());
         int h = (int) Math.round(src.getHeight());
-        if (reader == null || w <= 0 || h <= 0) return src;
+        if (reader == null || w <= 0 || h <= 0)
+            return src;
 
         int norm = ((degrees % 360) + 360) % 360;
-        if (norm == 0) return src;
+        if (norm == 0)
+            return src;
 
         switch (norm) {
             case 90: {
@@ -393,7 +417,8 @@ public class ViewerController {
 
     private void installContainFitHandlers() {
         imageView.setPreserveRatio(true);
-        // Robust contain: bind both fits to container; preserveRatio ensures the smaller axis is used
+        // Robust contain: bind both fits to container; preserveRatio ensures the
+        // smaller axis is used
         imageView.fitWidthProperty().unbind();
         imageView.fitHeightProperty().unbind();
         imageView.fitWidthProperty().bind(imageContainer.widthProperty());
@@ -409,14 +434,15 @@ public class ViewerController {
     private void installUndecoratedMoveResizeHandlers() {
         // Update cursor when hovering near edges
         root.setOnMouseMoved(e -> {
-            if (!isPrimary(e.isPrimaryButtonDown())) {
+            if (!e.isPrimaryButtonDown()) {
                 ResizeDir dir = hitTest(e.getX(), e.getY());
                 root.setCursor(cursorFor(dir));
             }
         });
 
         root.setOnMousePressed(e -> {
-            if (!e.isPrimaryButtonDown()) return;
+            if (!e.isPrimaryButtonDown())
+                return;
             pressScreenX = e.getScreenX();
             pressScreenY = e.getScreenY();
             pressStageX = stage.getX();
@@ -434,7 +460,8 @@ public class ViewerController {
         });
 
         root.setOnMouseDragged(e -> {
-            if (!e.isPrimaryButtonDown()) return;
+            if (!e.isPrimaryButtonDown())
+                return;
             // Disable cache while actively resizing for responsive updates
             imageView.setCache(false);
             if (moving) {
@@ -548,7 +575,8 @@ public class ViewerController {
                     newW = w;
                 }
             }
-            case NONE -> { /* no-op */ }
+            case NONE -> {
+                /* no-op */ }
         }
 
         stage.setX(newX);
@@ -557,7 +585,9 @@ public class ViewerController {
         stage.setHeight(newH);
     }
 
-    private double clamp(double v, double min, double max) { return Math.max(min, Math.min(max, v)); }
+    private double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
+    }
 
     private ResizeDir hitTest(double x, double y) {
         double w = root.getWidth();
@@ -566,14 +596,22 @@ public class ViewerController {
         boolean right = x >= w - EDGE;
         boolean top = y <= EDGE;
         boolean bottom = y >= h - EDGE;
-        if (top && left) return ResizeDir.NW;
-        if (top && right) return ResizeDir.NE;
-        if (bottom && left) return ResizeDir.SW;
-        if (bottom && right) return ResizeDir.SE;
-        if (top) return ResizeDir.N;
-        if (bottom) return ResizeDir.S;
-        if (left) return ResizeDir.W;
-        if (right) return ResizeDir.E;
+        if (top && left)
+            return ResizeDir.NW;
+        if (top && right)
+            return ResizeDir.NE;
+        if (bottom && left)
+            return ResizeDir.SW;
+        if (bottom && right)
+            return ResizeDir.SE;
+        if (top)
+            return ResizeDir.N;
+        if (bottom)
+            return ResizeDir.S;
+        if (left)
+            return ResizeDir.W;
+        if (right)
+            return ResizeDir.E;
         return ResizeDir.NONE;
     }
 
@@ -590,8 +628,6 @@ public class ViewerController {
             default -> Cursor.DEFAULT;
         };
     }
-
-    private boolean isPrimary(boolean primaryDownFlag) { return primaryDownFlag; }
 
     private void handleImageClose() {
         image = getDefaultImage();

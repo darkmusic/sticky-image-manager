@@ -134,7 +134,9 @@ public class ManagerController {
         launchMenuItem.setOnAction(_ -> handleLaunchAction());
         var killMenuItem = new MenuItem("Kill");
         killMenuItem.setOnAction(_ -> handleKillAction());
-        actionMenu.getItems().addAll(launchMenuItem, killMenuItem);
+        var resetMenuItem = new MenuItem("Reset");
+        resetMenuItem.setOnAction(_ -> handleResetAction());
+        actionMenu.getItems().addAll(launchMenuItem, killMenuItem, resetMenuItem);
 
         var helpMenu = new Menu("Help");
         var helpMenuItem = getHelpMenuItem("Help", "Sticky Image Manager Help", """
@@ -427,6 +429,21 @@ public class ManagerController {
         viewerControllers.clear();
         areViewersLaunched = false;
         logText("All viewer instances killed.");
+    }
+
+    private void handleResetAction() {
+        if (viewerControllers == null || viewerControllers.isEmpty()) {
+            logText("No viewers to reset. Launch viewers first.");
+            return;
+        }
+        // Move all viewers to the manager's current position; keep current sizes
+        var managerPos = new Point2D(stage.getX(), stage.getY());
+        for (var vc : viewerControllers) {
+            var w = vc.getStage().getWidth();
+            var h = vc.getStage().getHeight();
+            vc.safeMove(managerPos, new Dimension2D(w, h));
+        }
+        logText("Reset all viewers to manager position: (" + (int) managerPos.getX() + ", " + (int) managerPos.getY() + ")");
     }
 
     public AppPreferences loadAppPrefs(String appSettingsPath) {

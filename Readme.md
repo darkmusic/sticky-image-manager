@@ -36,6 +36,12 @@ It supports EXIF rotation if present.
 
 You can resize images if needed by dragging a corner or a side.  It will maintain the aspect ratio of the image.
 
+### Actions menu
+
+- Launch: Starts the configured number of viewer windows based on the current configuration.
+- Kill: Closes all launched viewer windows.
+- Reset: Moves all currently open viewer windows to the manager window's current position on screen, preserving their sizes and content. Use this if a viewer appears offscreen after launch.
+
 ### Drag and Drop
 
 - You can drag an image file from your OS (Explorer/Finder/Nautilus) directly onto a viewer to load it.

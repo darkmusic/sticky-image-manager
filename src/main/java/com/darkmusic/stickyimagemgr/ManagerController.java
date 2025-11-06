@@ -436,6 +436,16 @@ public class ManagerController {
             logText("No viewers to reset. Launch viewers first.");
             return;
         }
+        // Confirm before resetting positions
+        var alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Reset");
+        alert.setHeaderText("Reset all viewers?");
+        alert.setContentText("This will move all open viewer windows to the Manager's current position. Continue?");
+        var result = alert.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            logText("Reset canceled.");
+            return;
+        }
         // Move all viewers to the manager's current position; keep current sizes
         var managerPos = new Point2D(stage.getX(), stage.getY());
         for (var vc : viewerControllers) {

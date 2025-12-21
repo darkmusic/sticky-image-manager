@@ -3,6 +3,8 @@ module com.darkmusic.stickyimagemgr {
     requires transitive javafx.graphics;
     requires transitive javafx.base;
 
+    requires java.xml;
+
     requires org.controlsfx.controls;
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.bootstrapfx.core;

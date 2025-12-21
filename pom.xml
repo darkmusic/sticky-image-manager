@@ -13,6 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.11.3</junit.version>
         <metadata-extractor.version>2.19.0</metadata-extractor.version>
+        <xmpcore.version>6.1.11</xmpcore.version>
     </properties>
 
     <dependencies>
@@ -95,6 +96,13 @@
                                     <outputDirectory>${project.build.directory}/unpacked/metadata-extractor</outputDirectory>
                                     <includes>com/drew/**</includes>
                                 </artifactItem>
+                                <artifactItem>
+                                    <groupId>com.adobe.xmp</groupId>
+                                    <artifactId>xmpcore</artifactId>
+                                    <version>${xmpcore.version}</version>
+                                    <outputDirectory>${project.build.directory}/unpacked/metadata-extractor</outputDirectory>
+                                    <includes>com/adobe/**</includes>
+                                </artifactItem>
                             </artifactItems>
                         </configuration>
                     </execution>
@@ -117,6 +125,13 @@
                                     <version>${metadata-extractor.version}</version>
                                     <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                                     <includes>com/drew/**</includes>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>com.adobe.xmp</groupId>
+                                    <artifactId>xmpcore</artifactId>
+                                    <version>${xmpcore.version}</version>
+                                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                                    <includes>com/adobe/**</includes>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>

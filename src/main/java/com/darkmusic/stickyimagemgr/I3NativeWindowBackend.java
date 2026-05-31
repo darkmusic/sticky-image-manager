@@ -11,7 +11,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 class I3NativeWindowBackend implements NativeWindowBackend {
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(3);
@@ -189,14 +192,17 @@ class I3NativeWindowBackend implements NativeWindowBackend {
     private CommandResult run(String... command) {
         try {
             var process = new ProcessBuilder(command).redirectErrorStream(true).start();
+            var outputTask = new FutureTask<>(() -> new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+            Thread.ofVirtual().name("i3-command-output").start(outputTask);
             var completed = process.waitFor(COMMAND_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
             if (!completed) {
                 process.destroyForcibly();
+                process.waitFor(1, TimeUnit.SECONDS);
                 return new CommandResult(false, "");
             }
-            var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            var output = outputTask.get(COMMAND_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
             return new CommandResult(process.exitValue() == 0, output);
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | InterruptedException | ExecutionException | TimeoutException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }

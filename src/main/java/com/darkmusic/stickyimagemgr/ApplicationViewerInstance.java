@@ -6,6 +6,7 @@ import javafx.geometry.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Optional;
 
 class ApplicationViewerInstance implements ManagedViewerInstance {
     private static final long WINDOW_WAIT_MILLIS = 8000;
@@ -84,11 +85,7 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
     @Override
     public ViewerPrefs getViewerPrefs() {
         var prefs = initialPrefs.copy();
-        if (!ensureNativeWindow()) {
-            parent.logText("Application viewer geometry not captured; keeping configured geometry.");
-            return prefs;
-        }
-        var geometry = nativeWindowBackend.getGeometry(nativeWindow);
+        var geometry = getCurrentGeometry();
         if (geometry.isEmpty()) {
             parent.logText("Application viewer geometry not found; keeping configured geometry.");
             return prefs;
@@ -103,11 +100,9 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
 
     @Override
     public Dimension2D getSize() {
-        if (ensureNativeWindow()) {
-            var geometry = nativeWindowBackend.getGeometry(nativeWindow);
-            if (geometry.isPresent()) {
-                return new Dimension2D(geometry.get().getSizeW(), geometry.get().getSizeH());
-            }
+        var geometry = getCurrentGeometry();
+        if (geometry.isPresent()) {
+            return new Dimension2D(geometry.get().getSizeW(), geometry.get().getSizeH());
         }
         return new Dimension2D(initialPrefs.getSizeW(), initialPrefs.getSizeH());
     }
@@ -142,6 +137,7 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
         nativeWindowBackend.moveResize(nativeWindow,
                 new Point2D(initialPrefs.getLocationX(), initialPrefs.getLocationY()),
                 new Dimension2D(initialPrefs.getSizeW(), initialPrefs.getSizeH()));
+        refreshNativeWindow();
     }
 
     private void addStableWindowIdentityArguments(ArrayList<String> command) {
@@ -157,14 +153,34 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
         if (!nativeWindowBackend.isAvailable()) {
             return false;
         }
-        if (nativeWindow != null) {
+        if (nativeWindow != null && nativeWindowBackend.getGeometry(nativeWindow).isPresent()) {
             return true;
         }
+        nativeWindow = null;
         var window = nativeWindowBackend.findWindow(initialPrefs);
         if (window.isEmpty()) {
             return false;
         }
         nativeWindow = window.get();
         return true;
+    }
+
+    private Optional<WinPrefs> getCurrentGeometry() {
+        if (nativeWindow != null) {
+            var geometry = nativeWindowBackend.getGeometry(nativeWindow);
+            if (geometry.isPresent()) {
+                return geometry;
+            }
+            nativeWindow = null;
+        }
+        if (!ensureNativeWindow()) {
+            return Optional.empty();
+        }
+        return nativeWindowBackend.getGeometry(nativeWindow);
+    }
+
+    private void refreshNativeWindow() {
+        var refreshedWindow = nativeWindowBackend.findWindow(initialPrefs);
+        refreshedWindow.ifPresent(window -> nativeWindow = window);
     }
 }

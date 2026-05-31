@@ -2,12 +2,11 @@ package com.darkmusic.stickyimagemgr;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.StreamReadFeature;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -26,7 +25,8 @@ import java.util.Objects;
 
 public class ManagerController {
     private final List<String> recentFiles = new ArrayList<>();
-    private List<ViewerController> viewerControllers = new ArrayList<>();
+    private List<ManagedViewerInstance> viewerInstances = new ArrayList<>();
+    private NativeWindowBackend nativeWindowBackend = new UnsupportedNativeWindowBackend();
     private Menu openRecentMenu;
     private TextField windowCountTextField;
     private Label currentFileContent;
@@ -46,6 +46,14 @@ public class ManagerController {
 
     public void setLastUsedDirectory(String lastUsedDirectory) {
         this.lastUsedDirectory = lastUsedDirectory;
+    }
+
+    int getManagerLocationX() {
+        return managerPrefs == null ? (int) stage.getX() : managerPrefs.getLocationX();
+    }
+
+    int getManagerLocationY() {
+        return managerPrefs == null ? (int) stage.getY() : managerPrefs.getLocationY();
     }
 
     void setStage(Stage stage) {
@@ -147,6 +155,8 @@ public class ManagerController {
                 file with 'Save' or 'Save As...', and access recent files via 'Open Recent'.
                 Animated GIF image playback is supported.
                 Viewers run in undecorated mode: move by dragging the window, resize by dragging edges/corners.
+                Experimental application viewers can launch external applications from config files.
+                Native application window positioning currently supports i3 on X11/XLibre; other desktops may run application viewers in launch-only mode.
                 Exit the application with 'Exit'.
                 """);
         helpMenu.getItems().add(helpMenuItem);
@@ -159,6 +169,8 @@ public class ManagerController {
                                 Version 1.0
 
                                 Sticky Image Manager is a simple application that allows you to manage and launch multiple instances of a Viewer window.
+
+                                Application viewers are experimental. Native window positioning currently supports i3 on X11/XLibre.
 
                                 Developed by Thomas Johnson, and written in Java using JavaFX.
 
@@ -302,7 +314,7 @@ public class ManagerController {
 
     private void handleSaveAction() {
         try {
-            if (viewerControllers.isEmpty()) {
+            if (viewerInstances.isEmpty()) {
                 logText("No instances to save");
                 return;
             }
@@ -312,12 +324,14 @@ public class ManagerController {
             }
 
             var mapper = new ObjectMapper();
+            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
             var prefsFilePath = filename;
             managerPrefs.setInstanceCount(Integer.parseInt(windowCountTextField.getText()));
             managerPrefs.setLocationX((int) stage.getX());
             managerPrefs.setLocationY((int) stage.getY());
-            managerPrefs.setViewerPrefList(viewerControllers.stream().map(ViewerController::getViewerPrefs).toList());
+            managerPrefs.setInstances(viewerInstances.stream().map(ManagedViewerInstance::getViewerPrefs).toList());
+            managerPrefs.setViewerPrefList(null);
             mapper.writeValue(new File(prefsFilePath), managerPrefs);
             logText("Saved to file: " + prefsFilePath);
 
@@ -370,69 +384,56 @@ public class ManagerController {
         areViewersLaunched = true;
         if (managerPrefs == null) {
             logText("Please select new or open a config file.");
+            areViewersLaunched = false;
             return;
         }
-        viewerControllers = new ArrayList<>();
+        nativeWindowBackend = NativeWindowBackendFactory.create();
+        if (nativeWindowBackend.isAvailable()) {
+            logText("Native window backend: " + nativeWindowBackend.getDisplayName());
+        } else {
+            logText("Native window backend: none; application viewers launch only");
+        }
+        viewerInstances = new ArrayList<>();
         var instanceCount = 0;
         try {
             instanceCount = Integer.parseInt(windowCountTextField.getText());
         } catch (NumberFormatException e) {
             logText("Invalid window count: " + windowCountTextField.getText());
+            areViewersLaunched = false;
             return;
         }
         for (int i = 1; i <= instanceCount; i++) {
             ViewerPrefs viewerPrefs;
             try {
-                viewerPrefs = managerPrefs.getViewerPrefList().get(i - 1);
+                viewerPrefs = managerPrefs.getViewerEntries().get(i - 1);
             } catch (NullPointerException | IndexOutOfBoundsException e) {
                 viewerPrefs = new ViewerPrefs();
             }
-            var viewerController = new ViewerController();
-            viewerController.setParent(this);
-            viewerController.setStage(new Stage());
-            var content = viewerController.createContent(viewerPrefs);
-            logText("Launching instance " + i + " with image path: " + viewerPrefs.getImagePath());
-            var scene = new Scene(content);
-            viewerController.getStage().setTitle("Sticky Image Viewer " + i);
-            viewerController.getStage().setScene(scene);
-            viewerController.getStage().setMaxWidth(viewerPrefs.getSizeW());
-            int adjustedHeight = viewerPrefs.getSizeH();
-            viewerController.getStage().setMaxHeight(Math.max(0, adjustedHeight));
-            // Always use undecorated style
-            currentStageStyle = StageStyle.UNDECORATED;
-            viewerController.getStage().initStyle(currentStageStyle);
-            viewerController.getStage().show();
-
-            // Position using a consistent per-viewer calculation; do not mutate stored
-            // prefs
-            viewerController.safeMove(
-                    new Point2D(viewerPrefs.getLocationX(), viewerPrefs.getLocationY()),
-                    new Dimension2D(viewerPrefs.getSizeW(), Math.max(0, adjustedHeight)));
-            viewerController.getStage().setMaxWidth(Double.MAX_VALUE);
-            viewerController.getStage().setMaxHeight(Double.MAX_VALUE);
-
-            // If no image path is set, move to default location and set default size
-            if (viewerPrefs.getImagePath() == null) {
-                int defaultH = 300;
-                viewerController.safeMove(
-                        new Point2D(managerPrefs.getLocationX(), managerPrefs.getLocationY()),
-                        new Dimension2D(300, Math.max(0, defaultH)));
+            ManagedViewerInstance instance;
+            if (ViewerPrefs.TYPE_APPLICATION.equalsIgnoreCase(viewerPrefs.getType())) {
+                instance = new ApplicationViewerInstance(this, viewerPrefs, nativeWindowBackend);
+                logText("Launching application instance " + i + ": " + viewerPrefs.getCommand());
+            } else {
+                currentStageStyle = StageStyle.UNDECORATED;
+                instance = new ImageViewerInstance(this, viewerPrefs);
+                logText("Launching image instance " + i + " with image path: " + viewerPrefs.getImagePath());
             }
-            viewerControllers.add(viewerController);
+            instance.launch(i);
+            viewerInstances.add(instance);
         }
     }
 
     private void handleKillAction() {
-        for (var viewerController : viewerControllers) {
-            viewerController.getStage().close();
+        for (var viewerInstance : viewerInstances) {
+            viewerInstance.kill();
         }
-        viewerControllers.clear();
+        viewerInstances.clear();
         areViewersLaunched = false;
         logText("All viewer instances killed.");
     }
 
     private void handleResetAction() {
-        if (viewerControllers == null || viewerControllers.isEmpty()) {
+        if (viewerInstances == null || viewerInstances.isEmpty()) {
             logText("No viewers to reset. Launch viewers first.");
             return;
         }
@@ -448,10 +449,8 @@ public class ManagerController {
         }
         // Move all viewers to the manager's current position; keep current sizes
         var managerPos = new Point2D(stage.getX(), stage.getY());
-        for (var vc : viewerControllers) {
-            var w = vc.getStage().getWidth();
-            var h = vc.getStage().getHeight();
-            vc.safeMove(managerPos, new Dimension2D(w, h));
+        for (var viewerInstance : viewerInstances) {
+            viewerInstance.reset(managerPos);
         }
         logText("Reset all viewers to manager position: (" + (int) managerPos.getX() + ", " + (int) managerPos.getY() + ")");
     }

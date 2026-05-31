@@ -14,6 +14,7 @@ Features:
 - Stores recent images in a list for easy access
 - Remembers the last directory when browsing for an image in the viewer's file dialog
 - Supports GIF animations
+- Experimental application viewers can launch external applications from config files
 
 
 ![Sticky Image Manager](res/Screencast.gif)
@@ -41,6 +42,34 @@ You can resize images if needed by dragging a corner or a side.  It will maintai
 - Launch: Starts the configured number of viewer windows based on the current configuration.
 - Kill: Closes all launched viewer windows.
 - Reset: Moves all currently open viewer windows to the manager window's current position on screen, preserving their sizes and content. Use this if a viewer appears offscreen after launch.
+
+### Application Viewers
+
+Application viewers are experimental and configured directly in JSON. They can launch external applications on all platforms where the command is available. Native position and size management currently supports i3 on X11/XLibre using `i3-msg`; other desktops and operating systems run application viewers in launch-only mode.
+
+Example:
+
+```json
+{
+  "instanceCount": 1,
+  "locationX": 100,
+  "locationY": 100,
+  "instances": [
+    {
+      "type": "application",
+      "name": "ncmpcpp",
+      "command": "alacritty",
+      "arguments": ["--class", "sticky-ncmpcpp", "-e", "ncmpcpp"],
+      "workingDirectory": "/usr/bin",
+      "windowClass": "sticky-ncmpcpp",
+      "locationX": 1200,
+      "locationY": 40,
+      "sizeW": 760,
+      "sizeH": 900
+    }
+  ]
+}
+```
 
 ### Drag and Drop
 
@@ -87,6 +116,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [X] Improve resizing logic so no filling is needed
 - [X] Fix EXIF rotation issues
 - [X] Add drag-and-drop support
+- [X] Add experimental application viewers with i3/X11 native window positioning
 - [ ] Add support for multiple images per viewer (slideshow)
 - [ ] Add support for video files
 - [ ] Add support for image transitions

@@ -59,6 +59,10 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
     @Override
     public void kill() {
         killed = true;
+        if (ensureNativeWindow()) {
+            nativeWindowBackend.closeWindow(nativeWindow);
+            nativeWindow = null;
+        }
         if (process == null) {
             return;
         }

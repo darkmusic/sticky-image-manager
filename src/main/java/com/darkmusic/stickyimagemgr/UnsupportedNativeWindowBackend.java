@@ -26,6 +26,10 @@ class UnsupportedNativeWindowBackend implements NativeWindowBackend {
     }
 
     @Override
+    public void closeWindow(NativeWindow window) {
+    }
+
+    @Override
     public Optional<WinPrefs> getGeometry(NativeWindow window) {
         return Optional.empty();
     }

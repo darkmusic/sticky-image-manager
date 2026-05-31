@@ -14,5 +14,7 @@ interface NativeWindowBackend {
 
     void moveResize(NativeWindow window, Point2D location, Dimension2D size);
 
+    void closeWindow(NativeWindow window);
+
     Optional<WinPrefs> getGeometry(NativeWindow window);
 }

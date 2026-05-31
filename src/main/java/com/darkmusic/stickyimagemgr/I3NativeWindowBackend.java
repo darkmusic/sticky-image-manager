@@ -59,6 +59,11 @@ class I3NativeWindowBackend implements NativeWindowBackend {
     }
 
     @Override
+    public void closeWindow(NativeWindow window) {
+        run("i3-msg", "[con_id=\"" + window.id() + "\"]", "kill");
+    }
+
+    @Override
     public Optional<WinPrefs> getGeometry(NativeWindow window) {
         var tree = getTree();
         if (tree.isEmpty()) {

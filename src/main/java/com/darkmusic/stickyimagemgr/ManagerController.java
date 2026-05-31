@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -260,6 +261,10 @@ public class ManagerController {
         if (log == null) {
             return;
         }
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> logText(text));
+            return;
+        }
         log.setText(text + "\n" + log.getText());
     }
 
@@ -406,7 +411,7 @@ public class ManagerController {
             ViewerPrefs viewerPrefs;
             try {
                 viewerPrefs = managerPrefs.getViewerEntries().get(i - 1);
-            } catch (NullPointerException | IndexOutOfBoundsException e) {
+            } catch (IndexOutOfBoundsException e) {
                 viewerPrefs = new ViewerPrefs();
             }
             ManagedViewerInstance instance;

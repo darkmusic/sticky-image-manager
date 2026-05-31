@@ -185,11 +185,11 @@ class I3NativeWindowBackend implements NativeWindowBackend {
         try {
             var process = new ProcessBuilder(command).redirectErrorStream(true).start();
             var completed = process.waitFor(COMMAND_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-            var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             if (!completed) {
                 process.destroyForcibly();
-                return new CommandResult(false, output);
+                return new CommandResult(false, "");
             }
+            var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             return new CommandResult(process.exitValue() == 0, output);
         } catch (IOException | InterruptedException e) {
             if (e instanceof InterruptedException) {

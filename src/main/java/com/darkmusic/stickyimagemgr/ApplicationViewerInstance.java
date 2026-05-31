@@ -16,6 +16,7 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
     private final ManagerController parent;
     private Process process;
     private NativeWindow nativeWindow;
+    private volatile boolean killed;
 
     ApplicationViewerInstance(ManagerController parent, ViewerPrefs initialPrefs, NativeWindowBackend nativeWindowBackend) {
         this.parent = parent;
@@ -52,18 +53,12 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
             return;
         }
 
-        nativeWindow = waitForWindow();
-        if (nativeWindow == null) {
-            parent.logText("Application viewer " + index + " launched, but no matching native window was found.");
-            return;
-        }
-        nativeWindowBackend.moveResize(nativeWindow,
-                new Point2D(initialPrefs.getLocationX(), initialPrefs.getLocationY()),
-                new Dimension2D(initialPrefs.getSizeW(), initialPrefs.getSizeH()));
+        Thread.ofVirtual().name("application-viewer-window-" + index).start(() -> manageNativeWindow(index));
     }
 
     @Override
     public void kill() {
+        killed = true;
         if (process == null) {
             return;
         }
@@ -128,6 +123,21 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
             }
         }
         return null;
+    }
+
+    private void manageNativeWindow(int index) {
+        var window = waitForWindow();
+        if (killed) {
+            return;
+        }
+        if (window == null) {
+            parent.logText("Application viewer " + index + " launched, but no matching native window was found.");
+            return;
+        }
+        nativeWindow = window;
+        nativeWindowBackend.moveResize(nativeWindow,
+                new Point2D(initialPrefs.getLocationX(), initialPrefs.getLocationY()),
+                new Dimension2D(initialPrefs.getSizeW(), initialPrefs.getSizeH()));
     }
 
     private void addStableWindowIdentityArguments(ArrayList<String> command) {

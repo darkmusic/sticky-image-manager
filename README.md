@@ -9,11 +9,13 @@ It is designed to add some ambience to your desktop (if you have the available s
 Features:
 
 - Allows individual image viewers to be resized and repositioned as desired
-- Remembers positions, images, and sizes so they can be restored upon the next launch
+- Remembers positions, images, sizes, and viewer crop/fit state so they can be restored upon the next launch
 - Supports EXIF rotation
 - Stores recent images in a list for easy access
 - Remembers the last directory when browsing for an image in the viewer's file dialog
 - Supports GIF animations
+- Viewer context menu includes a **Fit Image to Window** toggle for switching between scaled-fit and crop-style resizing
+- Crop-style resizing keeps the image size fixed while the viewer window changes size, including when resizing floating windows through i3
 - Experimental application viewers can launch external applications from config files
 
 
@@ -36,6 +38,8 @@ It consists of two parts:
 It supports EXIF rotation if present.
 
 You can resize images if needed by dragging a corner or a side.  It will maintain the aspect ratio of the image.
+
+Right-click a viewer and uncheck **Fit Image to Window** to resize the viewer window without resizing the image inside it. In this mode the viewer acts like a crop window: the image remains at its current displayed size and the window clips the visible area. Resizing with the viewer's built-in edge/corner drag handles pins the image to the opposite side or corner. Resizing the floating window through i3/window-manager controls keeps the image frozen in screen space so the resize changes only the crop area. Saved layouts preserve the fit/crop mode, frozen image size, and crop offset for each viewer.
 
 ### Actions menu
 
@@ -114,6 +118,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [X] Support movement and resizing in undecorated mode
 - [X] Remove decorated mode once functionality has been confirmed in undecorated mode
 - [X] Improve resizing logic so no filling is needed
+- [X] Add crop-style viewer resizing via the Fit Image to Window toggle
 - [X] Fix EXIF rotation issues
 - [X] Add drag-and-drop support
 - [X] Add experimental application viewers with i3/X11 native window positioning

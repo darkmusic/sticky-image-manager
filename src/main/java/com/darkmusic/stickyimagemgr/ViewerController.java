@@ -4,12 +4,12 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifIFD0Directory;
 import com.drew.metadata.exif.ExifDirectoryBase;
-import javafx.beans.value.ChangeListener;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.application.Platform;
 import javafx.scene.Cursor;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
@@ -24,6 +24,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -54,10 +55,18 @@ public class ViewerController {
     }
 
     private ResizeDir activeResize = ResizeDir.NONE;
+    private ResizeDir cropAnchor = ResizeDir.NONE;
     private boolean moving = false;
     private double pressScreenX, pressScreenY;
     private double pressStageX, pressStageY, pressStageW, pressStageH;
     private double dragOffsetX, dragOffsetY; // for moving
+    private double lastStageX = Double.NaN;
+    private double lastStageY = Double.NaN;
+    private double lastContainerW = Double.NaN;
+    private double lastContainerH = Double.NaN;
+    private boolean fitImageToWindow = true;
+    private CheckMenuItem fitImageToWindowMenuItem;
+    private static final double CROP_PREF_PRECISION = 10.0;
 
     void setParent(ManagerController parent) {
         this.parent = parent;
@@ -74,6 +83,14 @@ public class ViewerController {
         newViewerPrefs.setSizeW((int) stage.getWidth());
         newViewerPrefs.setSizeH((int) stage.getHeight());
         newViewerPrefs.setImagePath(viewerPrefs.getImagePath());
+        newViewerPrefs.setFitImageToWindow(fitImageToWindow);
+        if (!fitImageToWindow && imageView != null) {
+            clampCropTranslation();
+            newViewerPrefs.setImageFitWidth(roundCropPref(imageView.getFitWidth()));
+            newViewerPrefs.setImageFitHeight(roundCropPref(imageView.getFitHeight()));
+            newViewerPrefs.setImageTranslateX(roundCropPref(imageView.getTranslateX()));
+            newViewerPrefs.setImageTranslateY(roundCropPref(imageView.getTranslateY()));
+        }
         return newViewerPrefs;
     }
 
@@ -82,11 +99,11 @@ public class ViewerController {
 
         imageMenu = new ContextMenu();
         imageMenu.setAutoHide(true);
-        imageMenu.getItems().add(new MenuItem("Open"));
+        imageMenu.getItems().add(new MenuItem("Open..."));
         imageMenu.setOnAction(event -> {
             var item = (MenuItem) event.getTarget();
             var text = item.getText();
-            if (text.equals("Open")) {
+            if (text.equals("Open...")) {
                 var fileChooser = new FileChooser();
                 fileChooser.setTitle("Open Image");
                 if (parent.getLastUsedDirectory() == null) {
@@ -102,17 +119,25 @@ public class ViewerController {
                 var file = fileChooser.showOpenDialog(null);
                 if (file != null) {
                     // Reuse same scene/handlers; just swap the image
-                    handleImageOpen(file.getAbsolutePath(), false);
+                    handleImageMenuOpen(file.getAbsolutePath(), false);
                     parent.setLastUsedDirectory(file.getParent());
                 }
             } else if (text.equals("Close")) {
-                handleImageClose();
+                handleImageMenuClose();
+            } else if (text.equals("Cancel")) {
+                handleImageMenuCancel();
+            } else if (text.equals("Fit Image to Window")) {
+                handleImageMenuFitImageToWindow();
             }
         });
         imageMenu.getItems().add(new MenuItem("Close"));
+        imageMenu.getItems().add(new MenuItem("Cancel"));
+        fitImageToWindowMenuItem = new CheckMenuItem("Fit Image to Window");
+        fitImageToWindowMenuItem.setSelected(fitImageToWindow);
+        imageMenu.getItems().add(fitImageToWindowMenuItem);
 
         try {
-            handleImageOpen(this.viewerPrefs.getImagePath(), false);
+            handleImageMenuOpen(this.viewerPrefs.getImagePath(), false);
             parent.setLastUsedDirectory(new File(this.viewerPrefs.getImagePath()).getParent());
         } catch (Exception e) {
             System.out.println("Error loading image: " + e.getMessage());
@@ -136,12 +161,40 @@ public class ViewerController {
         stage.setHeight(newSize.getHeight());
     }
 
-    private ChangeListener<Number> getNumberChangeListener(Dimension2D newSize, double oldImageWidth,
-            double oldImageHeight) {
-        return null;
+    void restoreViewerState() {
+        Platform.runLater(this::applySavedViewerState);
     }
 
-    private void handleImageOpen(String filePath, boolean setStage) {
+    private void applySavedViewerState() {
+        if (viewerPrefs == null || imageView == null) {
+            return;
+        }
+
+        if (viewerPrefs.isFitImageToWindow()) {
+            setFitImageToWindow(true);
+            return;
+        }
+
+        setFitImageToWindow(false);
+        if (isPositiveFinite(viewerPrefs.getImageFitWidth()) && isPositiveFinite(viewerPrefs.getImageFitHeight())) {
+            imageView.setFitWidth(viewerPrefs.getImageFitWidth());
+            imageView.setFitHeight(viewerPrefs.getImageFitHeight());
+        }
+        applySavedCropTranslation();
+        rememberCropGeometry();
+        Platform.runLater(() -> {
+            applySavedCropTranslation();
+            rememberCropGeometry();
+        });
+    }
+
+    private void applySavedCropTranslation() {
+        imageView.setTranslateX(finiteOrZero(viewerPrefs.getImageTranslateX()));
+        imageView.setTranslateY(finiteOrZero(viewerPrefs.getImageTranslateY()));
+        clampCropTranslation();
+    }
+
+    private void handleImageMenuOpen(String filePath, boolean setStage) {
         // Load image and synchronously bake EXIF rotation
         Image base;
         if (filePath == null) {
@@ -197,8 +250,12 @@ public class ViewerController {
             clip.widthProperty().bind(imageContainer.widthProperty());
             clip.heightProperty().bind(imageContainer.heightProperty());
             imageContainer.setClip(clip);
+            imageContainer.widthProperty().addListener((_, _, _) -> handleCropGeometryChanged());
+            imageContainer.heightProperty().addListener((_, _, _) -> handleCropGeometryChanged());
+            imageView.boundsInLocalProperty().addListener((_, _, _) -> updateCropTranslation(cropAnchor));
             BorderPane.setAlignment(imageContainer, javafx.geometry.Pos.CENTER);
             root.setOnContextMenuRequested(event -> imageMenu.show(imageView, event.getScreenX(), event.getScreenY()));
+            installContextMenuDismissHandler();
 
             if (setStage) {
                 Scene scene = new Scene(root);
@@ -208,8 +265,16 @@ public class ViewerController {
             installDragAndDropHandlers();
             Platform.runLater(this::updateFitBindings);
             if (stage != null) {
-                stage.widthProperty().addListener((obs, o, n) -> updateFitBindings());
-                stage.heightProperty().addListener((obs, o, n) -> updateFitBindings());
+                stage.xProperty().addListener((_, _, _) -> handleCropGeometryChanged());
+                stage.yProperty().addListener((_, _, _) -> handleCropGeometryChanged());
+                stage.widthProperty().addListener((_, _, _) -> {
+                    handleCropGeometryChanged();
+                    updateFitBindings();
+                });
+                stage.heightProperty().addListener((_, _, _) -> {
+                    handleCropGeometryChanged();
+                    updateFitBindings();
+                });
             }
             // Auto-fit window to image to remove initial letterboxing on load
             Platform.runLater(this::autoFitStageToImage);
@@ -223,6 +288,14 @@ public class ViewerController {
             });
         }
         viewerPrefs.setImagePath(filePath);
+    }
+
+    private void installContextMenuDismissHandler() {
+        root.addEventFilter(MouseEvent.MOUSE_PRESSED, _ -> {
+            if (imageMenu != null && imageMenu.isShowing()) {
+                imageMenu.hide();
+            }
+        });
     }
 
     private void installDragAndDropHandlers() {
@@ -256,7 +329,7 @@ public class ViewerController {
                 if (db.hasFiles()) {
                     for (java.io.File f : db.getFiles()) {
                         if (isAcceptableImageFile(f)) {
-                            handleImageOpen(f.getAbsolutePath(), false);
+                            handleImageMenuOpen(f.getAbsolutePath(), false);
                             if (parent != null)
                                 parent.setLastUsedDirectory(f.getParent());
                             success = true;
@@ -267,7 +340,7 @@ public class ViewerController {
                     String url = db.getUrl();
                     if (isAcceptableImagePath(url) && url.startsWith("file:")) {
                         java.nio.file.Path p = java.nio.file.Paths.get(java.net.URI.create(url));
-                        handleImageOpen(p.toAbsolutePath().toString(), false);
+                        handleImageMenuOpen(p.toAbsolutePath().toString(), false);
                         if (parent != null && p.getParent() != null)
                             parent.setLastUsedDirectory(p.getParent().toString());
                         success = true;
@@ -277,14 +350,14 @@ public class ViewerController {
                     if (isAcceptableImagePath(s)) {
                         if (s.startsWith("file:")) {
                             java.nio.file.Path p = java.nio.file.Paths.get(java.net.URI.create(s));
-                            handleImageOpen(p.toAbsolutePath().toString(), false);
+                            handleImageMenuOpen(p.toAbsolutePath().toString(), false);
                             if (parent != null && p.getParent() != null)
                                 parent.setLastUsedDirectory(p.getParent().toString());
                             success = true;
                         } else {
                             java.io.File f = new java.io.File(s);
                             if (f.exists() && isAcceptableImageFile(f)) {
-                                handleImageOpen(f.getAbsolutePath(), false);
+                                handleImageMenuOpen(f.getAbsolutePath(), false);
                                 if (parent != null)
                                     parent.setLastUsedDirectory(f.getParent());
                                 success = true;
@@ -417,18 +490,48 @@ public class ViewerController {
 
     private void installContainFitHandlers() {
         imageView.setPreserveRatio(true);
-        // Robust contain: bind both fits to container; preserveRatio ensures the
-        // smaller axis is used
-        imageView.fitWidthProperty().unbind();
-        imageView.fitHeightProperty().unbind();
-        imageView.fitWidthProperty().bind(imageContainer.widthProperty());
-        imageView.fitHeightProperty().bind(imageContainer.heightProperty());
+        setFitImageToWindow(fitImageToWindow);
         // When image changes, nothing else needed; bindings handle sizing
     }
 
     private void updateFitBindings() {
-        // No-op with dual-fit binding; preserveRatio decides effective fit
         imageView.setPreserveRatio(true);
+        if (fitImageToWindow) {
+            setFitImageToWindow(true);
+        }
+    }
+
+    private void setFitImageToWindow(boolean fit) {
+        fitImageToWindow = fit;
+        if (fitImageToWindowMenuItem != null) {
+            fitImageToWindowMenuItem.setSelected(fitImageToWindow);
+        }
+        if (imageView == null || imageContainer == null) {
+            return;
+        }
+
+        imageView.fitWidthProperty().unbind();
+        imageView.fitHeightProperty().unbind();
+
+        if (fitImageToWindow) {
+            cropAnchor = ResizeDir.NONE;
+            resetCropTranslation();
+            rememberCropGeometry();
+            imageView.fitWidthProperty().bind(imageContainer.widthProperty());
+            imageView.fitHeightProperty().bind(imageContainer.heightProperty());
+        } else {
+            cropAnchor = ResizeDir.NONE;
+            resetCropTranslation();
+            double fitWidth = imageView.getBoundsInParent().getWidth();
+            double fitHeight = imageView.getBoundsInParent().getHeight();
+            if (fitWidth <= 0 || fitHeight <= 0) {
+                fitWidth = imageContainer.getWidth();
+                fitHeight = imageContainer.getHeight();
+            }
+            imageView.setFitWidth(fitWidth);
+            imageView.setFitHeight(fitHeight);
+            rememberCropGeometry();
+        }
     }
 
     private void installUndecoratedMoveResizeHandlers() {
@@ -452,6 +555,10 @@ public class ViewerController {
 
             activeResize = hitTest(e.getX(), e.getY());
             moving = (activeResize == ResizeDir.NONE);
+            if (!moving && !fitImageToWindow) {
+                cropAnchor = activeResize;
+                updateCropTranslation(cropAnchor);
+            }
             if (moving) {
                 dragOffsetX = e.getScreenX() - stage.getX();
                 dragOffsetY = e.getScreenY() - stage.getY();
@@ -496,12 +603,12 @@ public class ViewerController {
         double newW = pressStageW;
         double newH = pressStageH;
 
-        double aspect = imgAspect;
-        if (aspect <= 0) {
-            // Fallback to current window aspect
-            aspect = Math.max(0.1, pressStageW / Math.max(1.0, pressStageH));
+        if (!fitImageToWindow) {
+            applyFreeResize(dx, dy, minW, minH);
+            return;
         }
 
+        double aspect = getResizeAspect();
         switch (activeResize) {
             case E -> {
                 newW = clamp(pressStageW + dx, minW, Double.MAX_VALUE);
@@ -585,6 +692,189 @@ public class ViewerController {
         stage.setHeight(newH);
     }
 
+    private void applyFreeResize(double dx, double dy, double minW, double minH) {
+        ResizeDir anchor = cropAnchor == ResizeDir.NONE ? activeResize : cropAnchor;
+        double newX = pressStageX;
+        double newY = pressStageY;
+        double newW = pressStageW;
+        double newH = pressStageH;
+
+        switch (activeResize) {
+            case E, NE, SE -> newW = clamp(pressStageW + dx, minW, Double.MAX_VALUE);
+            case W, NW, SW -> {
+                double w = clamp(pressStageW - dx, minW, Double.MAX_VALUE);
+                newX = pressStageX + (pressStageW - w);
+                newW = w;
+            }
+            default -> {
+            }
+        }
+
+        switch (activeResize) {
+            case S, SE, SW -> newH = clamp(pressStageH + dy, minH, Double.MAX_VALUE);
+            case N, NE, NW -> {
+                double h = clamp(pressStageH - dy, minH, Double.MAX_VALUE);
+                newY = pressStageY + (pressStageH - h);
+                newH = h;
+            }
+            default -> {
+            }
+        }
+
+        stage.setX(newX);
+        stage.setY(newY);
+        stage.setWidth(newW);
+        stage.setHeight(newH);
+        updateCropTranslation(anchor);
+        rememberCropGeometry();
+        Platform.runLater(() -> updateCropTranslation(anchor));
+    }
+
+    private void handleCropGeometryChanged() {
+        if (fitImageToWindow || imageView == null || imageContainer == null || stage == null) {
+            rememberCropGeometry();
+            return;
+        }
+
+        if (moving || activeResize != ResizeDir.NONE) {
+            updateCropTranslation(cropAnchor);
+            rememberCropGeometry();
+            return;
+        }
+
+        double currentStageX = stage.getX();
+        double currentStageY = stage.getY();
+        double currentContainerW = imageContainer.getWidth();
+        double currentContainerH = imageContainer.getHeight();
+        if (!isValidCropGeometry(currentStageX, currentStageY, currentContainerW, currentContainerH)) {
+            rememberCropGeometry();
+            return;
+        }
+        if (!isValidCropGeometry(lastStageX, lastStageY, lastContainerW, lastContainerH)) {
+            rememberCropGeometry();
+            return;
+        }
+
+        if (!sizeChanged(currentContainerW, currentContainerH)) {
+            Platform.runLater(() -> {
+                if (!fitImageToWindow && activeResize == ResizeDir.NONE
+                        && !sizeChanged(imageContainer.getWidth(), imageContainer.getHeight())) {
+                    rememberCropGeometry();
+                }
+            });
+            return;
+        }
+
+        double dx = lastStageX - currentStageX - ((currentContainerW - lastContainerW) / 2.0);
+        double dy = lastStageY - currentStageY - ((currentContainerH - lastContainerH) / 2.0);
+        imageView.setTranslateX(imageView.getTranslateX() + dx);
+        imageView.setTranslateY(imageView.getTranslateY() + dy);
+        clampCropTranslation();
+        rememberCropGeometry();
+    }
+
+    private void updateCropTranslation(ResizeDir dir) {
+        if (fitImageToWindow || imageView == null || imageContainer == null || dir == ResizeDir.NONE) {
+            return;
+        }
+
+        double containerW = imageContainer.getWidth();
+        double containerH = imageContainer.getHeight();
+        double imageW = imageView.getBoundsInLocal().getWidth();
+        double imageH = imageView.getBoundsInLocal().getHeight();
+        if (containerW <= 0 || containerH <= 0 || imageW <= 0 || imageH <= 0) {
+            resetCropTranslation();
+            return;
+        }
+
+        double translateX = switch (dir) {
+            case E, NE, SE -> (imageW - containerW) / 2.0; // pin left edge
+            case W, NW, SW -> (containerW - imageW) / 2.0; // pin right edge
+            default -> 0.0;
+        };
+        double translateY = switch (dir) {
+            case S, SE, SW -> (imageH - containerH) / 2.0; // pin top edge
+            case N, NE, NW -> (containerH - imageH) / 2.0; // pin bottom edge
+            default -> 0.0;
+        };
+
+        imageView.setTranslateX(translateX);
+        imageView.setTranslateY(translateY);
+        clampCropTranslation();
+    }
+
+    private void rememberCropGeometry() {
+        if (stage == null || imageContainer == null) {
+            return;
+        }
+        lastStageX = stage.getX();
+        lastStageY = stage.getY();
+        lastContainerW = imageContainer.getWidth();
+        lastContainerH = imageContainer.getHeight();
+    }
+
+    private boolean isValidCropGeometry(double stageX, double stageY, double containerW, double containerH) {
+        return Double.isFinite(stageX) && Double.isFinite(stageY) && containerW > 0 && containerH > 0;
+    }
+
+    private boolean sizeChanged(double containerW, double containerH) {
+        return Math.abs(containerW - lastContainerW) > 0.5 || Math.abs(containerH - lastContainerH) > 0.5;
+    }
+
+    private boolean isPositiveFinite(Double value) {
+        return value != null && Double.isFinite(value) && value > 0;
+    }
+
+    private double finiteOrZero(Double value) {
+        return value != null && Double.isFinite(value) ? value : 0.0;
+    }
+
+    private void clampCropTranslation() {
+        if (fitImageToWindow || imageView == null || imageContainer == null) {
+            return;
+        }
+
+        double containerW = imageContainer.getWidth();
+        double containerH = imageContainer.getHeight();
+        double imageW = imageView.getBoundsInLocal().getWidth();
+        double imageH = imageView.getBoundsInLocal().getHeight();
+        if (containerW <= 0 || containerH <= 0 || imageW <= 0 || imageH <= 0) {
+            return;
+        }
+
+        double visibleSliver = 1.0;
+        double maxTranslateX = Math.max(0.0, ((imageW + containerW) / 2.0) - visibleSliver);
+        double minTranslateX = -maxTranslateX;
+        double maxTranslateY = Math.max(0.0, ((imageH + containerH) / 2.0) - visibleSliver);
+        double minTranslateY = -maxTranslateY;
+
+        imageView.setTranslateX(clamp(imageView.getTranslateX(), minTranslateX, maxTranslateX));
+        imageView.setTranslateY(clamp(imageView.getTranslateY(), minTranslateY, maxTranslateY));
+    }
+
+    private double roundCropPref(double value) {
+        if (!Double.isFinite(value)) {
+            return 0.0;
+        }
+        return Math.round(value * CROP_PREF_PRECISION) / CROP_PREF_PRECISION;
+    }
+
+    private void resetCropTranslation() {
+        if (imageView == null) {
+            return;
+        }
+        imageView.setTranslateX(0);
+        imageView.setTranslateY(0);
+    }
+
+    private double getResizeAspect() {
+        if (imgAspect > 0) {
+            return imgAspect;
+        }
+        // Fallback to current window aspect
+        return Math.max(0.1, pressStageW / Math.max(1.0, pressStageH));
+    }
+
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }
@@ -629,8 +919,16 @@ public class ViewerController {
         };
     }
 
-    private void handleImageClose() {
+    private void handleImageMenuClose() {
         image = getDefaultImage();
+    }
+
+    private void handleImageMenuCancel() {
+
+    }
+
+    private void handleImageMenuFitImageToWindow() {
+        setFitImageToWindow(!fitImageToWindow);
     }
 
     private Image getDefaultImage() {

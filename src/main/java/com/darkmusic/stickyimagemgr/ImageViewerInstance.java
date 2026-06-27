@@ -41,6 +41,7 @@ class ImageViewerInstance implements ManagedViewerInstance {
                     new Point2D(parent.getManagerLocationX(), parent.getManagerLocationY()),
                     new Dimension2D(300, 300));
         }
+        controller.restoreViewerState();
     }
 
     @Override

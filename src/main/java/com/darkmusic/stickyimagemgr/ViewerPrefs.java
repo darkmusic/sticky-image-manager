@@ -9,6 +9,11 @@ public class ViewerPrefs extends WinPrefs {
 
     private String type = TYPE_IMAGE;
     private String imagePath;
+    private Boolean fitImageToWindow = true;
+    private Double imageFitWidth;
+    private Double imageFitHeight;
+    private Double imageTranslateX;
+    private Double imageTranslateY;
     private String name;
     private String command;
     private List<String> arguments = new ArrayList<>();
@@ -33,6 +38,46 @@ public class ViewerPrefs extends WinPrefs {
 
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
+    }
+
+    public boolean isFitImageToWindow() {
+        return fitImageToWindow == null || fitImageToWindow;
+    }
+
+    public void setFitImageToWindow(Boolean fitImageToWindow) {
+        this.fitImageToWindow = fitImageToWindow;
+    }
+
+    public Double getImageFitWidth() {
+        return imageFitWidth;
+    }
+
+    public void setImageFitWidth(Double imageFitWidth) {
+        this.imageFitWidth = imageFitWidth;
+    }
+
+    public Double getImageFitHeight() {
+        return imageFitHeight;
+    }
+
+    public void setImageFitHeight(Double imageFitHeight) {
+        this.imageFitHeight = imageFitHeight;
+    }
+
+    public Double getImageTranslateX() {
+        return imageTranslateX;
+    }
+
+    public void setImageTranslateX(Double imageTranslateX) {
+        this.imageTranslateX = imageTranslateX;
+    }
+
+    public Double getImageTranslateY() {
+        return imageTranslateY;
+    }
+
+    public void setImageTranslateY(Double imageTranslateY) {
+        this.imageTranslateY = imageTranslateY;
     }
 
     public String getName() {
@@ -91,6 +136,11 @@ public class ViewerPrefs extends WinPrefs {
         copy.setSizeW(getSizeW());
         copy.setSizeH(getSizeH());
         copy.setImagePath(imagePath);
+        copy.setFitImageToWindow(isFitImageToWindow());
+        copy.setImageFitWidth(imageFitWidth);
+        copy.setImageFitHeight(imageFitHeight);
+        copy.setImageTranslateX(imageTranslateX);
+        copy.setImageTranslateY(imageTranslateY);
         copy.setName(name);
         copy.setCommand(command);
         copy.setArguments(new ArrayList<>(arguments));

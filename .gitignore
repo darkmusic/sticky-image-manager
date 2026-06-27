@@ -40,3 +40,7 @@ build/
 
 ### App settings ###
 /config
+
+*.log
+
+docs/plans

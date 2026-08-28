@@ -3,6 +3,7 @@ package com.darkmusic.stickyimagemgr;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 
+import java.util.List;
 import java.util.Optional;
 
 interface NativeWindowBackend {
@@ -10,7 +11,12 @@ interface NativeWindowBackend {
 
     String getDisplayName();
 
-    Optional<NativeWindow> findWindow(ViewerPrefs prefs);
+    List<NativeWindow> findWindows(ViewerPrefs prefs);
+
+    default Optional<NativeWindow> findWindow(ViewerPrefs prefs) {
+        var windows = findWindows(prefs);
+        return windows.isEmpty() ? Optional.empty() : Optional.of(windows.getLast());
+    }
 
     void moveResize(NativeWindow window, Point2D location, Dimension2D size);
 

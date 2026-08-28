@@ -3,6 +3,7 @@ package com.darkmusic.stickyimagemgr;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 
+import java.util.List;
 import java.util.Optional;
 
 class UnsupportedNativeWindowBackend implements NativeWindowBackend {
@@ -17,8 +18,8 @@ class UnsupportedNativeWindowBackend implements NativeWindowBackend {
     }
 
     @Override
-    public Optional<NativeWindow> findWindow(ViewerPrefs prefs) {
-        return Optional.empty();
+    public List<NativeWindow> findWindows(ViewerPrefs prefs) {
+        return List.of();
     }
 
     @Override

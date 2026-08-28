@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.Objects;
 
 public class ManagerController {
@@ -40,6 +42,12 @@ public class ManagerController {
     private String lastUsedDirectory;
     private StageStyle currentStageStyle = StageStyle.UNDECORATED;
     private boolean areViewersLaunched = false;
+    private final Executor applicationViewerLaunchExecutor = Executors.newSingleThreadExecutor(
+            Thread.ofVirtual().name("application-viewer-launch-", 0).factory());
+
+    void launchApplicationViewer(Runnable launchTask) {
+        applicationViewerLaunchExecutor.execute(launchTask);
+    }
 
     public String getLastUsedDirectory() {
         return lastUsedDirectory;

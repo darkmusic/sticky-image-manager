@@ -6,7 +6,9 @@ import javafx.geometry.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 class ApplicationViewerInstance implements ManagedViewerInstance {
     private static final long WINDOW_WAIT_MILLIS = 8000;
@@ -15,8 +17,9 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
     private final ViewerPrefs initialPrefs;
     private final NativeWindowBackend nativeWindowBackend;
     private final ManagerController parent;
-    private Process process;
-    private NativeWindow nativeWindow;
+    private final Object stateLock = new Object();
+    private volatile Process process;
+    private volatile NativeWindow nativeWindow;
     private volatile boolean killed;
 
     ApplicationViewerInstance(ManagerController parent, ViewerPrefs initialPrefs, NativeWindowBackend nativeWindowBackend) {
@@ -41,20 +44,14 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
             builder.directory(new File(initialPrefs.getWorkingDirectory()));
         }
 
-        try {
-            process = builder.start();
-            parent.logText("Launching application viewer " + index + ": " + String.join(" ", command));
-        } catch (IOException e) {
-            parent.logText("Failed to launch application viewer " + index + ": " + e.getMessage());
-            return;
-        }
-
         if (!nativeWindowBackend.isAvailable()) {
-            parent.logText("Application viewer " + index + " launched in launch-only mode; native window positioning is unavailable.");
+            if (startProcess(index, command, builder)) {
+                parent.logText("Application viewer " + index + " launched in launch-only mode; native window positioning is unavailable.");
+            }
             return;
         }
 
-        Thread.ofVirtual().name("application-viewer-window-" + index).start(() -> manageNativeWindow(index));
+        parent.launchApplicationViewer(() -> launchAndManageNativeWindow(index, command, builder));
     }
 
     @Override
@@ -64,12 +61,13 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
             nativeWindowBackend.closeWindow(nativeWindow);
             nativeWindow = null;
         }
-        if (process == null) {
+        var launchedProcess = process;
+        if (launchedProcess == null) {
             return;
         }
-        process.destroy();
-        if (process.isAlive()) {
-            process.destroyForcibly();
+        launchedProcess.destroy();
+        if (launchedProcess.isAlive()) {
+            launchedProcess.destroyForcibly();
         }
     }
 
@@ -107,12 +105,14 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
         return new Dimension2D(initialPrefs.getSizeW(), initialPrefs.getSizeH());
     }
 
-    private NativeWindow waitForWindow() {
+    private NativeWindow waitForNewWindow(Set<NativeWindow> windowsBeforeLaunch) {
         var deadline = System.currentTimeMillis() + WINDOW_WAIT_MILLIS;
-        while (System.currentTimeMillis() < deadline) {
-            var window = nativeWindowBackend.findWindow(initialPrefs);
-            if (window.isPresent()) {
-                return window.get();
+        while (!killed && System.currentTimeMillis() < deadline) {
+            var windows = nativeWindowBackend.findWindows(initialPrefs);
+            for (var window : windows.reversed()) {
+                if (!windowsBeforeLaunch.contains(window)) {
+                    return window;
+                }
             }
             try {
                 Thread.sleep(WINDOW_POLL_MILLIS);
@@ -124,8 +124,18 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
         return null;
     }
 
-    private void manageNativeWindow(int index) {
-        var window = waitForWindow();
+    private void launchAndManageNativeWindow(int index, ArrayList<String> command, ProcessBuilder builder) {
+        // Floorp gives every SSB the same WM_CLASS. The manager runs these tasks
+        // in config order, so each snapshot/launch/discovery cycle claims the
+        // window created by its own command rather than another viewer's window.
+        if (killed) {
+            return;
+        }
+        var windowsBeforeLaunch = new HashSet<>(nativeWindowBackend.findWindows(initialPrefs));
+        if (!startProcess(index, command, builder)) {
+            return;
+        }
+        var window = waitForNewWindow(windowsBeforeLaunch);
         if (killed) {
             return;
         }
@@ -137,7 +147,24 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
         nativeWindowBackend.moveResize(nativeWindow,
                 new Point2D(initialPrefs.getLocationX(), initialPrefs.getLocationY()),
                 new Dimension2D(initialPrefs.getSizeW(), initialPrefs.getSizeH()));
-        refreshNativeWindow();
+    }
+
+    private boolean startProcess(int index, ArrayList<String> command, ProcessBuilder builder) {
+        try {
+            var launchedProcess = builder.start();
+            synchronized (stateLock) {
+                process = launchedProcess;
+                if (killed) {
+                    launchedProcess.destroyForcibly();
+                    return false;
+                }
+            }
+            parent.logText("Launching application viewer " + index + ": " + String.join(" ", command));
+            return true;
+        } catch (IOException e) {
+            parent.logText("Failed to launch application viewer " + index + ": " + e.getMessage());
+            return false;
+        }
     }
 
     private void addStableWindowIdentityArguments(ArrayList<String> command) {
@@ -153,10 +180,16 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
         if (!nativeWindowBackend.isAvailable()) {
             return false;
         }
-        if (nativeWindow != null && nativeWindowBackend.getGeometry(nativeWindow).isPresent()) {
+        // NativeWindow now stores the stable X11 window ID, not i3's container
+        // ID, so floating/reparenting cannot make this reference stale.
+        if (nativeWindow != null) {
             return true;
         }
-        nativeWindow = null;
+        if (hasStartSsbArgument()) {
+            // A Floorp SSB cannot be safely re-identified after its X11 window
+            // disappears because neither i3 nor X11 exposes the SSB UUID.
+            return false;
+        }
         var window = nativeWindowBackend.findWindow(initialPrefs);
         if (window.isEmpty()) {
             return false;
@@ -171,6 +204,10 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
             if (geometry.isPresent()) {
                 return geometry;
             }
+            if (hasStartSsbArgument()) {
+                // Keep the only safe identity through transient i3 IPC errors.
+                return Optional.empty();
+            }
             nativeWindow = null;
         }
         if (!ensureNativeWindow()) {
@@ -179,8 +216,7 @@ class ApplicationViewerInstance implements ManagedViewerInstance {
         return nativeWindowBackend.getGeometry(nativeWindow);
     }
 
-    private void refreshNativeWindow() {
-        var refreshedWindow = nativeWindowBackend.findWindow(initialPrefs);
-        refreshedWindow.ifPresent(window -> nativeWindow = window);
+    private boolean hasStartSsbArgument() {
+        return initialPrefs.getArguments().contains("--start-ssb");
     }
 }

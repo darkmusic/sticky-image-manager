@@ -38,22 +38,25 @@ class I3NativeWindowBackend implements NativeWindowBackend {
     }
 
     @Override
-    public Optional<NativeWindow> findWindow(ViewerPrefs prefs) {
+    public List<NativeWindow> findWindows(ViewerPrefs prefs) {
         var tree = getTree();
         if (tree.isEmpty()) {
-            return Optional.empty();
+            return List.of();
         }
+        return findWindows(tree.get(), prefs);
+    }
+
+    List<NativeWindow> findWindows(JsonNode tree, ViewerPrefs prefs) {
         var matches = new ArrayList<JsonNode>();
-        collectMatchingWindows(tree.get(), prefs, matches);
-        if (matches.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(new NativeWindow(matches.getLast().path("id").asText()));
+        collectMatchingWindows(tree, prefs, matches);
+        return matches.stream()
+                .map(node -> new NativeWindow(node.path("window").asText()))
+                .toList();
     }
 
     @Override
     public void moveResize(NativeWindow window, Point2D location, Dimension2D size) {
-        var criteria = "[con_id=\"" + window.id() + "\"]";
+        var criteria = "[id=\"" + window.id() + "\"]";
         run("i3-msg", criteria, "floating", "enable");
         run("i3-msg", criteria, "move", "position",
                 String.valueOf((int) location.getX()), String.valueOf((int) location.getY()));
@@ -63,7 +66,7 @@ class I3NativeWindowBackend implements NativeWindowBackend {
 
     @Override
     public void closeWindow(NativeWindow window) {
-        run("i3-msg", "[con_id=\"" + window.id() + "\"]", "kill");
+        run("i3-msg", "[id=\"" + window.id() + "\"]", "kill");
     }
 
     @Override
@@ -72,7 +75,7 @@ class I3NativeWindowBackend implements NativeWindowBackend {
         if (tree.isEmpty()) {
             return Optional.empty();
         }
-        return findById(tree.get(), window.id()).map(node -> {
+        return findByWindowId(tree.get(), window.id()).map(node -> {
             var rect = node.path("rect");
             var prefs = new WinPrefs();
             prefs.setLocationX(rect.path("x").asInt());
@@ -151,7 +154,19 @@ class I3NativeWindowBackend implements NativeWindowBackend {
             }
             appId = appId.replace("{", "").replace("}", "");
             var windowClass = node.path("window_properties").path("class").asText("");
-            return windowClass.contains(appId);
+            if (windowClass.contains(appId)) {
+                return true;
+            }
+
+            // Floorp does not expose an SSB's UUID in its X11 metadata. All SSB
+            // windows use WM_CLASS floorp/Navigator, so launch-time matching must
+            // use the newly-created window ID to distinguish individual apps.
+            var command = prefs.getCommand();
+            if (command == null || command.isBlank()) {
+                return false;
+            }
+            var commandName = new java.io.File(command).getName();
+            return commandName.equalsIgnoreCase(windowClass);
         }
         return false;
     }
@@ -165,23 +180,23 @@ class I3NativeWindowBackend implements NativeWindowBackend {
         return Optional.empty();
     }
 
-    private Optional<JsonNode> findById(JsonNode node, String id) {
-        if (id.equals(node.path("id").asText())) {
+    private Optional<JsonNode> findByWindowId(JsonNode node, String id) {
+        if (id.equals(node.path("window").asText())) {
             return Optional.of(node);
         }
-        var childMatch = findByIdInChildren(node.path("nodes"), id);
+        var childMatch = findByWindowIdInChildren(node.path("nodes"), id);
         if (childMatch.isPresent()) {
             return childMatch;
         }
-        return findByIdInChildren(node.path("floating_nodes"), id);
+        return findByWindowIdInChildren(node.path("floating_nodes"), id);
     }
 
-    private Optional<JsonNode> findByIdInChildren(JsonNode children, String id) {
+    private Optional<JsonNode> findByWindowIdInChildren(JsonNode children, String id) {
         if (!children.isArray()) {
             return Optional.empty();
         }
         for (var child : children) {
-            var match = findById(child, id);
+            var match = findByWindowId(child, id);
             if (match.isPresent()) {
                 return match;
             }
